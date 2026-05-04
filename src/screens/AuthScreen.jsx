@@ -3,6 +3,12 @@ import { supabase } from '../lib/supabase'
 
 export default function AuthScreen({ defaultTab = 'login' }) {
   const [tab, setTab] = useState(defaultTab)
+  const [successMsg, setSuccessMsg] = useState('')
+
+  function handleSignUpSuccess() {
+    setSuccessMsg('Account created! You can now log in.')
+    setTab('login')
+  }
 
   return (
     <div className="min-h-screen bg-app-bg flex flex-col items-center justify-center px-6 py-12">
@@ -16,7 +22,7 @@ export default function AuthScreen({ defaultTab = 'login' }) {
           {['login', 'signup'].map(t => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => { setTab(t); setSuccessMsg('') }}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
                 tab === t
                   ? 'text-white border-b-2 border-accent-deep -mb-px'
@@ -29,7 +35,10 @@ export default function AuthScreen({ defaultTab = 'login' }) {
         </div>
 
         <div className="p-6">
-          {tab === 'login' ? <LoginForm /> : <SignUpForm />}
+          {successMsg && (
+            <p className="text-green-400 text-xs mb-4 text-center">{successMsg}</p>
+          )}
+          {tab === 'login' ? <LoginForm /> : <SignUpForm onSuccess={handleSignUpSuccess} />}
 
           <Divider />
 
@@ -73,7 +82,7 @@ function LoginForm() {
   )
 }
 
-function SignUpForm() {
+function SignUpForm({ onSuccess }) {
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -100,7 +109,8 @@ function SignUpForm() {
     })
     setLoading(false)
 
-    if (error) setErrors({ general: error.message })
+    if (error) { setErrors({ general: error.message }); return }
+    onSuccess()
   }
 
   return (
