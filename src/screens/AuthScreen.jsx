@@ -3,10 +3,8 @@ import { supabase } from '../lib/supabase'
 
 export default function AuthScreen({ defaultTab = 'login' }) {
   const [tab, setTab] = useState(defaultTab)
-  const [successMsg, setSuccessMsg] = useState('')
 
   function handleSignUpSuccess() {
-    setSuccessMsg('Account created! You can now log in.')
     setTab('login')
   }
 
@@ -22,7 +20,7 @@ export default function AuthScreen({ defaultTab = 'login' }) {
           {['login', 'signup'].map(t => (
             <button
               key={t}
-              onClick={() => { setTab(t); setSuccessMsg('') }}
+              onClick={() => setTab(t)}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
                 tab === t
                   ? 'text-white border-b-2 border-accent-deep -mb-px'
@@ -35,9 +33,6 @@ export default function AuthScreen({ defaultTab = 'login' }) {
         </div>
 
         <div className="p-6">
-          {successMsg && (
-            <p className="text-green-400 text-xs mb-4 text-center">{successMsg}</p>
-          )}
           {tab === 'login' ? <LoginForm /> : <SignUpForm onSuccess={handleSignUpSuccess} />}
 
           <Divider />
@@ -89,6 +84,7 @@ function SignUpForm({ onSuccess }) {
   const [confirm, setConfirm] = useState('')
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const [created, setCreated] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -110,7 +106,25 @@ function SignUpForm({ onSuccess }) {
     setLoading(false)
 
     if (error) { setErrors({ general: error.message }); return }
-    onSuccess()
+    setCreated(true)
+  }
+
+  if (created) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-4 text-center">
+        <div className="w-12 h-12 rounded-full bg-accent-deep/20 flex items-center justify-center text-2xl">
+          ✓
+        </div>
+        <p className="text-white font-semibold">Account created!</p>
+        <p className="text-white/50 text-xs">You can now log in with your credentials.</p>
+        <button
+          onClick={onSuccess}
+          className="w-full bg-accent-deep hover:bg-accent-mid text-white py-3 rounded-xl font-semibold text-sm transition-colors mt-2"
+        >
+          Go to Log In
+        </button>
+      </div>
+    )
   }
 
   return (
