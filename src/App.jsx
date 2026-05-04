@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import AuthScreen from './screens/AuthScreen'
+import HomeScreen from './screens/HomeScreen'
+import TasksScreen from './screens/TasksScreen'
+import SpacesScreen from './screens/SpacesScreen'
+import AlertsScreen from './screens/AlertsScreen'
 import BottomNav from './components/BottomNav'
 
 export default function App() {
@@ -62,10 +66,10 @@ export default function App() {
         </button>
       </header>
 
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] text-center px-6">
-        <p className="text-2xl font-semibold text-white">Good morning, {displayName}!</p>
-        <p className="text-white/40 text-sm mt-2">Home screen coming soon.</p>
-      </div>
+      {screen === 'home' && <HomeScreen displayName={displayName} />}
+      {screen === 'tasks' && <TasksScreen />}
+      {screen === 'spaces' && <SpacesScreen />}
+      {screen === 'notifications' && <AlertsScreen />}
       <BottomNav active={screen} onNavigate={setScreen} />
     </div>
   )
