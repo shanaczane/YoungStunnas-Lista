@@ -88,7 +88,7 @@ export default function App() {
   if (session === undefined) {
     return (
       <div className="min-h-screen bg-app-bg flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-accent-light border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-accent-deep border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -137,7 +137,11 @@ export default function App() {
         )}
       </div>
 
-      <BottomNav active={screen} onNavigate={tab => navigateTo(tab)} />
+      <BottomNav
+        active={screen}
+        onNavigate={tab => navigateTo(tab)}
+        onAddTask={() => navigateTo('home', { focusChat: true })}
+      />
 
       {selectedTask && (
         <TaskDetailModal

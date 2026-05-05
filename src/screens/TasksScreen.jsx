@@ -25,20 +25,20 @@ export default function TasksScreen({ tasks, onTaskUpdated, onOpenTask, onNaviga
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="px-5 pt-12 pb-4">
-        <h1 className="text-white font-bold text-xl">My Tasks</h1>
+      <header className="px-5 pt-6 pb-4 bg-white border-b border-black/6">
+        <h1 className="text-slate-900 font-bold text-2xl">My Tasks</h1>
+        <p className="text-slate-400 text-xs mt-0.5">{filtered.length} task{filtered.length !== 1 ? 's' : ''}</p>
       </header>
 
-      {/* Category filter */}
-      <div className="flex gap-2 px-5 pb-4 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-2 px-5 py-3 overflow-x-auto scrollbar-hide bg-white border-b border-black/6">
         {CATEGORIES.map(cat => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
               activeCategory === cat
                 ? 'bg-accent-deep text-white'
-                : 'border border-white/20 text-white/50 hover:text-white hover:border-white/40'
+                : 'bg-slate-100 text-slate-500 hover:text-slate-800'
             }`}
           >
             {cat}
@@ -46,7 +46,7 @@ export default function TasksScreen({ tasks, onTaskUpdated, onOpenTask, onNaviga
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4 space-y-6">
         {filtered.length === 0 ? (
           <EmptyTasks category={activeCategory} onNavigate={onNavigate} />
         ) : (
@@ -56,19 +56,19 @@ export default function TasksScreen({ tasks, onTaskUpdated, onOpenTask, onNaviga
                 onClick={() => toggleCollapse(group)}
                 className="flex items-center gap-2 w-full mb-3"
               >
-                <span className={`text-xs font-semibold uppercase tracking-wider ${
-                  group === 'Overdue' ? 'text-red-400' :
-                  group === 'Today' ? 'text-accent-light' :
-                  group === 'Done' ? 'text-white/25' : 'text-white/40'
+                <span className={`text-[11px] font-bold uppercase tracking-widest ${
+                  group === 'Overdue' ? 'text-red-500' :
+                  group === 'Today'   ? 'text-accent-deep' :
+                  group === 'Done'    ? 'text-slate-300' : 'text-slate-400'
                 }`}>
                   {group}
                 </span>
-                <span className="text-white/20 text-xs">{grouped[group].length}</span>
-                <span className="ml-auto text-white/30 text-xs">{collapsed[group] ? '▶' : '▼'}</span>
+                <span className="text-[10px] font-semibold text-slate-300 bg-slate-100 px-1.5 py-0.5 rounded-full">{grouped[group].length}</span>
+                <span className="ml-auto text-slate-300 text-xs">{collapsed[group] ? '›' : '‹'}</span>
               </button>
 
               {!collapsed[group] && (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {grouped[group].map(task => (
                     <TaskCard
                       key={task.id}
@@ -83,14 +83,6 @@ export default function TasksScreen({ tasks, onTaskUpdated, onOpenTask, onNaviga
           ))
         )}
       </div>
-
-      {/* FAB */}
-      <button
-        onClick={() => onNavigate('home', { focusChat: true })}
-        className="fixed bottom-20 right-5 w-14 h-14 bg-accent-deep hover:bg-accent-mid rounded-full shadow-lg flex items-center justify-center text-white text-2xl transition-colors z-10"
-      >
-        +
-      </button>
     </div>
   )
 }
@@ -99,38 +91,36 @@ function TaskCard({ task, onToggle, onOpen }) {
   const colors = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.Personal
 
   return (
-    <div
-      className="bg-card-bg rounded-xl flex items-center border border-white/10 hover:border-white/20 transition-colors overflow-hidden"
-    >
+    <div className="bg-white rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99]">
       <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: colors.border }} />
 
       <button
         onClick={onToggle}
-        className="w-10 h-10 flex items-center justify-center flex-shrink-0 ml-1"
+        className="w-11 h-11 flex items-center justify-center flex-shrink-0"
       >
         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
           task.is_complete
             ? 'bg-accent-deep border-accent-deep'
-            : 'border-white/30 hover:border-accent-light'
+            : 'border-slate-300'
         }`}>
           {task.is_complete && (
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="white">
-              <path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           )}
         </div>
       </button>
 
-      <button onClick={onOpen} className="flex-1 py-3 pr-3 text-left min-w-0">
-        <p className={`text-sm font-medium leading-tight truncate ${
-          task.is_complete ? 'line-through text-white/25' : 'text-white'
+      <button onClick={onOpen} className="flex-1 py-3.5 pr-3 text-left min-w-0">
+        <p className={`text-sm font-semibold leading-tight truncate ${
+          task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'
         }`}>
           {task.task_name}
         </p>
         {task.due_date && (
           <p className={`text-xs mt-0.5 ${
             getDateGroup(task.due_date) === 'Overdue' && !task.is_complete
-              ? 'text-red-400' : 'text-white/40'
+              ? 'text-red-500' : 'text-slate-400'
           }`}>
             {formatDueDate(task.due_date)}
           </p>
@@ -138,7 +128,7 @@ function TaskCard({ task, onToggle, onOpen }) {
       </button>
 
       <span
-        className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded mr-3"
+        className="flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full mr-3"
         style={{ backgroundColor: colors.bg, color: colors.text }}
       >
         {task.category}
@@ -150,17 +140,13 @@ function TaskCard({ task, onToggle, onOpen }) {
 function EmptyTasks({ category, onNavigate }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-      <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/30">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-      </div>
-      <p className="text-white/50 text-sm">
+      <img src="/mascots/tasks.png" alt="Ollie" className="w-32 h-32 object-contain mb-2" />
+      <p className="text-slate-400 text-sm">
         No {category !== 'All' ? category.toLowerCase() + ' ' : ''}tasks yet
       </p>
       <button
         onClick={() => onNavigate('home', { focusChat: true })}
-        className="mt-4 border border-white/20 text-white/60 text-sm px-4 py-2 rounded-xl hover:text-white hover:border-white/40 transition-colors"
+        className="mt-4 border border-black/10 text-slate-500 text-sm px-4 py-2 rounded-xl hover:text-accent-deep hover:border-accent-deep/30 transition-colors"
       >
         Add a task
       </button>

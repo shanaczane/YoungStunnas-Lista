@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { CATEGORY_COLORS } from '../lib/utils'
 
 const REMINDER_OPTIONS = [
@@ -44,7 +44,6 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
     onDelete(task.id)
   }
 
-  // Close on backdrop click
   function handleBackdrop(e) {
     if (e.target === e.currentTarget) onClose()
   }
@@ -53,47 +52,42 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end bg-black/30 backdrop-blur-sm"
       onClick={handleBackdrop}
     >
-      <div className="w-full bg-app-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-white/10">
-        {/* Handle */}
+      <div className="w-full bg-white rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-black/10">
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-white/20 rounded-full" />
+          <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
 
-        <div className="overflow-y-auto flex-1 px-5 pb-6">
-          {/* AI Summary bar */}
+        <div className="overflow-y-auto flex-1 px-5 pb-8">
           {task.content && task.content !== task.task_name && (
-            <div className="bg-accent-deep/10 border border-accent-deep/30 rounded-xl px-3 py-2.5 mb-4 mt-2">
-              <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Original input</p>
-              <p className="text-accent-pale text-xs italic">"{task.content}"</p>
+            <div className="bg-accent-pale border border-accent-light/30 rounded-xl px-3 py-2.5 mb-4 mt-2">
+              <p className="text-accent-deep text-[10px] font-semibold uppercase tracking-wider mb-0.5">Original input</p>
+              <p className="text-accent-deep/70 text-xs italic">"{task.content}"</p>
             </div>
           )}
 
-          {/* Task name */}
           <div className="mb-4">
             <input
               type="text"
               value={taskName}
               onChange={e => setTaskName(e.target.value)}
-              className="w-full bg-transparent text-white text-xl font-semibold outline-none border-b border-white/10 focus:border-accent-mid pb-2 transition-colors"
+              className="w-full bg-transparent text-slate-900 text-xl font-semibold outline-none border-b border-slate-200 focus:border-accent-deep pb-2 transition-colors"
               placeholder="Task name"
             />
           </div>
 
-          {/* Category + Due date row */}
           <div className="flex gap-3 mb-4">
             <div className="flex-1">
-              <label className="text-white/40 text-xs font-medium block mb-1.5">Category</label>
+              <label className="text-slate-400 text-xs font-medium block mb-1.5">Category</label>
               <select
                 value={category}
                 onChange={e => setCategory(e.target.value)}
-                className="w-full bg-card-bg text-white text-sm rounded-xl px-3 py-2.5 outline-none border border-white/10 focus:border-accent-mid transition-colors"
-                style={{ colorScheme: 'dark' }}
+                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
               >
                 {['School','Work','Personal','Errands','Health'].map(c => (
-                  <option key={c} value={c} style={{ background: '#0D3875' }}>{c}</option>
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
@@ -104,37 +98,34 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
           </div>
 
           <div className="mb-4">
-            <label className="text-white/40 text-xs font-medium block mb-1.5">Due Date &amp; Time</label>
+            <label className="text-slate-400 text-xs font-medium block mb-1.5">Due Date &amp; Time</label>
             <input
               type="datetime-local"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-card-bg text-white text-sm rounded-xl px-3 py-2.5 outline-none border border-white/10 focus:border-accent-mid transition-colors"
-              style={{ colorScheme: 'dark' }}
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
             />
           </div>
 
-          {/* Notes */}
           <div className="mb-4">
-            <label className="text-white/40 text-xs font-medium block mb-1.5">Notes</label>
+            <label className="text-slate-400 text-xs font-medium block mb-1.5">Notes</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Add notes..."
               rows={3}
-              className="w-full bg-card-bg text-white text-sm rounded-xl px-3 py-2.5 outline-none border border-white/10 focus:border-accent-mid transition-colors resize-none placeholder:text-white/20"
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
             />
           </div>
 
-          {/* Reminder */}
-          <div className="mb-6 bg-card-bg rounded-xl px-4 py-3 border border-white/10">
+          <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-black/10">
             <div className="flex items-center justify-between">
-              <p className="text-white text-sm font-medium">Remind me before due</p>
+              <p className="text-slate-800 text-sm font-medium">Remind me before due</p>
               <button
                 onClick={() => setReminderEnabled(v => !v)}
-                className={`w-11 h-6 rounded-full transition-colors ${reminderEnabled ? 'bg-accent-deep' : 'bg-white/20'}`}
+                className={`w-11 h-6 rounded-full transition-colors ${reminderEnabled ? 'bg-accent-deep' : 'bg-slate-200'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full mx-1 transition-transform ${reminderEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                <div className={`w-4 h-4 bg-white rounded-full mx-1 transition-transform shadow-sm ${reminderEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
             {reminderEnabled && (
@@ -146,7 +137,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
                     className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       reminderMinutes === opt.value
                         ? 'bg-accent-deep text-white'
-                        : 'border border-white/20 text-white/50 hover:text-white'
+                        : 'border border-black/10 text-slate-500 hover:text-accent-deep'
                     }`}
                   >
                     {opt.label}
@@ -156,7 +147,6 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
             )}
           </div>
 
-          {/* Action buttons */}
           {isDirty && (
             <button
               onClick={handleSave}
@@ -171,8 +161,8 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
             onClick={handleDelete}
             className={`w-full py-3 rounded-xl text-sm font-medium transition-colors ${
               showDeleteConfirm
-                ? 'bg-red-500/20 text-red-400 border border-red-500/40'
-                : 'border border-white/10 text-white/30 hover:text-red-400 hover:border-red-400/30'
+                ? 'bg-red-50 text-red-500 border border-red-200'
+                : 'border border-black/10 text-slate-400 hover:text-red-500 hover:border-red-200'
             }`}
           >
             {showDeleteConfirm ? 'Tap again to delete' : 'Delete Task'}

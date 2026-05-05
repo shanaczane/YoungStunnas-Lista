@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import chatMascot from '../mascots/chat.png'
 import { supabase } from '../lib/supabase'
 import { parseTask } from '../lib/ai'
 import { CATEGORY_COLORS, formatDueDate, getGreeting } from '../lib/utils'
@@ -44,7 +45,6 @@ export default function HomeScreen({
     setParseError('')
     setParsing(true)
     setParseCard(null)
-
     try {
       const parsed = await parseTask(trimmed)
       setParseCard({ raw: trimmed, ...parsed })
@@ -68,7 +68,6 @@ export default function HomeScreen({
     }).select().single()
 
     if (error) {
-      // DB not set up yet — save locally so the demo still works
       console.warn('Supabase insert failed:', error.message)
       onTaskCreated({
         id: crypto.randomUUID(),
@@ -107,17 +106,25 @@ export default function HomeScreen({
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-5 pt-12 pb-4">
-        <h1 className="text-white font-bold text-xl tracking-tight">Lista</h1>
+      <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
         <div className="flex items-center gap-3">
-          <p className="text-accent-pale text-sm">{getGreeting()}, {displayName.split(' ')[0]}</p>
-          <button
-            onClick={() => onNavigate('notifications')}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 text-white/70 hover:text-white hover:bg-white/15 transition-colors"
-          >
-            <BellIcon />
-          </button>
+          <img
+            src={chatMascot}
+            alt="Lista"
+            className="w-16 h-16 object-contain flex-shrink-0"
+            style={{ mixBlendMode: 'multiply' }}
+          />
+          <div>
+            <p className="text-slate-400 text-xs leading-none mb-0.5">{getGreeting()},</p>
+            <h1 className="text-slate-900 font-bold text-lg leading-tight">{displayName.split(' ')[0]}</h1>
+          </div>
         </div>
+        <button
+          onClick={() => onNavigate('notifications')}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:text-accent-deep hover:bg-accent-pale transition-colors"
+        >
+          <BellIcon />
+        </button>
       </header>
 
       <div className="flex-1 overflow-y-auto pb-40">
@@ -125,55 +132,58 @@ export default function HomeScreen({
           <EmptyHome />
         ) : (
           <>
-            {/* Upcoming strip */}
             {upcoming.length > 0 && (
-              <section className="px-5 mb-6">
-                <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Due Soon</p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <section className="px-5 pt-5 mb-5">
+                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Due Soon</p>
+                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
                   {upcoming.map(task => (
                     <button
                       key={task.id}
                       onClick={() => onOpenTask(task.id)}
-                      className="flex-shrink-0 bg-card-bg rounded-xl px-3 py-2.5 text-left min-w-[140px] border border-white/10 hover:border-accent-light/40 transition-colors"
+                      className="flex-shrink-0 bg-white rounded-2xl px-4 py-3 text-left min-w-[152px] card-elevated transition-all active:scale-95"
                     >
-                      <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{task.task_name}</p>
-                      <p className="text-accent-pale text-[10px] mt-1">{formatDueDate(task.due_date)}</p>
-                      <span
-                        className="inline-block mt-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: CATEGORY_COLORS[task.category]?.bg, color: CATEGORY_COLORS[task.category]?.text }}
-                      >
-                        {task.category}
-                      </span>
+                      <div
+                        className="w-6 h-1 rounded-full mb-2"
+                        style={{ backgroundColor: CATEGORY_COLORS[task.category]?.border }}
+                      />
+                      <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2">{task.task_name}</p>
+                      <p className="text-slate-400 text-[10px] mt-1.5">{formatDueDate(task.due_date)}</p>
                     </button>
                   ))}
                 </div>
               </section>
             )}
 
-            {/* Recent tasks */}
             <section className="px-5">
-              <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3">Recent Tasks</p>
-              <div className="space-y-2">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Tasks</p>
+                {tasks.length > 5 && (
+                  <button onClick={() => onNavigate('tasks')} className="text-accent-deep text-xs font-semibold">
+                    View all →
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2.5">
                 {recent.map(task => (
                   <button
                     key={task.id}
                     onClick={() => onOpenTask(task.id)}
-                    className="w-full bg-card-bg rounded-xl px-4 py-3 flex items-center gap-3 border border-white/10 hover:border-accent-light/30 transition-colors text-left"
+                    className="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 card-elevated transition-all active:scale-[0.99] text-left"
                   >
                     <div
                       className="w-1 self-stretch rounded-full flex-shrink-0"
                       style={{ backgroundColor: CATEGORY_COLORS[task.category]?.border }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium leading-tight ${task.is_complete ? 'line-through text-white/30' : 'text-white'}`}>
+                      <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
                         {task.task_name}
                       </p>
                       {task.due_date && (
-                        <p className="text-white/40 text-xs mt-0.5">{formatDueDate(task.due_date)}</p>
+                        <p className="text-slate-400 text-xs mt-0.5">{formatDueDate(task.due_date)}</p>
                       )}
                     </div>
                     <span
-                      className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded"
+                      className="flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
                       style={{ backgroundColor: CATEGORY_COLORS[task.category]?.bg, color: CATEGORY_COLORS[task.category]?.text }}
                     >
                       {task.category}
@@ -181,28 +191,21 @@ export default function HomeScreen({
                   </button>
                 ))}
               </div>
-              {tasks.length > 5 && (
-                <button
-                  onClick={() => onNavigate('tasks')}
-                  className="w-full mt-3 text-accent-light text-sm py-2 hover:text-white transition-colors"
-                >
-                  View all {tasks.length} tasks →
-                </button>
-              )}
             </section>
           </>
         )}
       </div>
 
       {/* Bottom fixed area: parse card + chat input stacked */}
-      <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/95 backdrop-blur-sm flex flex-col gap-2">
-        {/* Parse card */}
+      <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
-          <div className="bg-card-bg border border-accent-mid/40 rounded-2xl p-4 shadow-xl animate-slide-up">
-            <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-3">AI Parsed</p>
-            {parseError && <p className="text-amber-400 text-xs mb-2">{parseError}</p>}
+          <div className="bg-white rounded-2xl p-4 card-elevated-lg animate-slide-up">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-accent-deep text-[10px] font-bold uppercase tracking-widest">AI Parsed</span>
+              {parseError && <p className="text-amber-500 text-[10px]">{parseError}</p>}
+            </div>
 
-            <div className="space-y-2 mb-3">
+            <div className="space-y-2.5 mb-3">
               <EditableRow
                 label="Task"
                 value={parseCard.task}
@@ -210,25 +213,24 @@ export default function HomeScreen({
               />
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <p className="text-white/40 text-[10px] mb-1">Category</p>
+                  <p className="text-slate-400 text-[10px] font-semibold mb-1">Category</p>
                   <select
                     value={parseCard.category || 'Personal'}
                     onChange={e => handleEditField('category', e.target.value)}
-                    className="w-full bg-white/10 text-white text-xs rounded-lg px-2.5 py-1.5 outline-none border border-transparent focus:border-accent-mid"
+                    className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-black/10 focus:border-accent-deep"
                   >
                     {['School','Work','Personal','Errands','Health'].map(c => (
-                      <option key={c} value={c} style={{ background: '#0D3875' }}>{c}</option>
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
                 <div className="flex-1">
-                  <p className="text-white/40 text-[10px] mb-1">Due Date</p>
+                  <p className="text-slate-400 text-[10px] font-semibold mb-1">Due Date</p>
                   <input
                     type="datetime-local"
                     value={parseCard.due_date ? parseCard.due_date.slice(0, 16) : ''}
                     onChange={e => handleEditField('due_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                    className="w-full bg-white/10 text-white text-xs rounded-lg px-2.5 py-1.5 outline-none border border-transparent focus:border-accent-mid"
-                    style={{ colorScheme: 'dark' }}
+                    className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-black/10 focus:border-accent-deep"
                   />
                 </div>
               </div>
@@ -237,13 +239,13 @@ export default function HomeScreen({
             <div className="flex gap-2">
               <button
                 onClick={() => { setParseCard(null); setParseError('') }}
-                className="flex-1 py-2 rounded-xl border border-white/20 text-white/60 text-sm hover:text-white hover:border-white/40 transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-black/10 text-slate-500 text-sm font-medium hover:text-slate-800 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirm}
-                className="flex-1 py-2 rounded-xl bg-accent-deep hover:bg-accent-mid text-white text-sm font-semibold transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-accent-deep text-white text-sm font-bold transition-colors active:bg-accent-mid"
               >
                 Save Task
               </button>
@@ -251,8 +253,7 @@ export default function HomeScreen({
           </div>
         )}
 
-        {/* Chat input */}
-        <div className="flex items-center gap-2 bg-card-bg border border-white/15 rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 card-elevated">
           <input
             ref={inputRef}
             type="text"
@@ -260,12 +261,12 @@ export default function HomeScreen({
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder='Type anything... "finish report by Friday"'
-            className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/25"
+            className="flex-1 bg-transparent text-slate-800 text-sm outline-none placeholder:text-slate-300"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || parsing}
-            className="w-8 h-8 rounded-full bg-accent-deep hover:bg-accent-mid flex items-center justify-center transition-colors disabled:opacity-40 flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-accent-deep flex items-center justify-center transition-colors disabled:opacity-40 active:bg-accent-mid flex-shrink-0"
           >
             {parsing ? (
               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -282,12 +283,12 @@ export default function HomeScreen({
 function EditableRow({ label, value, onChange }) {
   return (
     <div>
-      <p className="text-white/40 text-[10px] mb-1">{label}</p>
+      <p className="text-slate-400 text-[10px] mb-1">{label}</p>
       <input
         type="text"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none border border-transparent focus:border-accent-mid"
+        className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2 outline-none border border-black/10 focus:border-accent-deep"
       />
     </div>
   )
@@ -296,13 +297,9 @@ function EditableRow({ label, value, onChange }) {
 function EmptyHome() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] px-8 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-accent-deep/20 flex items-center justify-center mb-4">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-accent-light">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
-      </div>
-      <p className="text-white font-semibold text-lg">Type your first task</p>
-      <p className="text-white/40 text-sm mt-2 leading-relaxed">
+      <img src={chatMascot} alt="Ollie" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
+      <p className="text-slate-800 font-semibold text-lg">Type your first task</p>
+      <p className="text-slate-400 text-sm mt-2 leading-relaxed">
         Just type naturally below — Lista will organize it for you automatically.
       </p>
     </div>
@@ -311,8 +308,9 @@ function EmptyHome() {
 
 function BellIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 01-3.46 0"/>
     </svg>
   )
 }

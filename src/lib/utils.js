@@ -1,9 +1,9 @@
 export const CATEGORY_COLORS = {
-  School:   { bg: 'rgba(26,86,160,0.35)',  border: '#1A56A0', text: '#A8C9F0' },
-  Work:     { bg: 'rgba(45,110,196,0.35)', border: '#2D6EC4', text: '#A8C9F0' },
-  Personal: { bg: 'rgba(74,144,217,0.30)', border: '#4A90D9', text: '#A8C9F0' },
-  Errands:  { bg: 'rgba(168,201,240,0.20)',border: '#A8C9F0', text: '#A8C9F0' },
-  Health:   { bg: 'rgba(13,56,117,0.50)',  border: '#0D3875', text: '#4A90D9' },
+  School:   { bg: '#DBEAFE', border: '#1A56A0', text: '#1A56A0' },
+  Work:     { bg: '#EFF6FF', border: '#2563EB', text: '#2563EB' },
+  Personal: { bg: '#F0F9FF', border: '#3B82F6', text: '#3B82F6' },
+  Errands:  { bg: '#F8FAFC', border: '#64748B', text: '#64748B' },
+  Health:   { bg: '#ECFDF5', border: '#059669', text: '#059669' },
 }
 
 export function getGreeting() {
