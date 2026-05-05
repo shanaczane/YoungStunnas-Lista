@@ -1,7 +1,7 @@
-import { supabase } from '../lib/supabase'
+import ProfileAvatar from '../components/ProfileAvatar'
 import { CATEGORY_COLORS, formatDueDate, getDateGroup } from '../lib/utils'
 
-export default function AlertsScreen({ tasks, session, onOpenTask }) {
+export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate }) {
   const upcoming = tasks
     .filter(t => !t.is_complete && t.due_date)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
@@ -10,10 +10,6 @@ export default function AlertsScreen({ tasks, session, onOpenTask }) {
   const today   = upcoming.filter(t => getDateGroup(t.due_date) === 'Today')
   const later   = upcoming.filter(t => !['Overdue', 'Today'].includes(getDateGroup(t.due_date)))
 
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-  }
-
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
@@ -21,12 +17,7 @@ export default function AlertsScreen({ tasks, session, onOpenTask }) {
           <h1 className="text-slate-900 font-bold text-2xl">Reminders</h1>
           <p className="text-slate-400 text-xs mt-0.5">{upcoming.length} upcoming</p>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="text-slate-400 text-xs font-semibold border border-black/10 px-3 py-1.5 rounded-xl transition-colors hover:text-red-500 hover:border-red-200"
-        >
-          Sign out
-        </button>
+        <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
       </header>
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4 space-y-6">

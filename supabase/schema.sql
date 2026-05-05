@@ -33,6 +33,16 @@ create table if not exists tasks (
   created_at timestamptz default now()
 );
 
+-- Categories
+create table categories (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users not null,
+  name text not null,
+  color text not null,   -- hex e.g. '#a855f7'
+  emoji text,            -- e.g. '📚'
+  created_at timestamptz default now()
+);
+
 -- Row-level security
 alter table tasks enable row level security;
 alter table spaces enable row level security;
@@ -105,6 +115,21 @@ create policy "space_members_delete" on space_members for delete
     )
     or user_id = auth.uid()
   );
+
+-- Categories RLS
+alter table categories enable row level security;
+create policy "Users manage own categories" on categories
+  for all using (auth.uid() = user_id);
+
+-- Add a policy allowing users to read space_members they belong to
+create policy "Members can view space_members" on space_members
+  for select using (
+    user_id = auth.uid()
+    or space_id in (
+      select space_id from space_members where user_id = auth.uid()
+    )
+  );
+
 
 -- Enable realtime for tasks and spaces
 alter publication supabase_realtime add table tasks;

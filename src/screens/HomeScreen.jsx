@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import AppLogo from '../components/AppLogo'
+import ProfileAvatar from '../components/ProfileAvatar'
 import homeMascot from '../mascots/home-mascot.png'
 import { parseTask } from '../lib/ai'
-import { CATEGORY_COLORS, formatDueDate, getGreeting } from '../lib/utils'
+import { formatDueDate, getGreeting } from '../lib/utils'
+import { BUILT_IN_CATEGORIES, getCategoryColor } from '../lib/categories'
 
 export default function HomeScreen({
   session,
   displayName,
   tasks,
+  categories,
   onTaskCreated,
   onNavigate,
   onOpenTask,
@@ -115,12 +118,15 @@ export default function HomeScreen({
             <h1 className="text-slate-900 font-bold text-lg leading-tight">{displayName.split(' ')[0]}</h1>
           </div>
         </div>
-        <button
-          onClick={() => onNavigate('notifications')}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:text-accent-deep hover:bg-accent-pale transition-colors"
-        >
-          <BellIcon />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigate('notifications')}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:text-accent-deep hover:bg-accent-pale transition-colors"
+          >
+            <BellIcon />
+          </button>
+          <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto pb-40">
@@ -140,7 +146,7 @@ export default function HomeScreen({
                     >
                       <div
                         className="w-6 h-1 rounded-full mb-2"
-                        style={{ backgroundColor: CATEGORY_COLORS[task.category]?.border }}
+                        style={{ backgroundColor: getCategoryColor(task.category, categories)?.border }}
                       />
                       <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2">{task.task_name}</p>
                       <p className="text-slate-400 text-[10px] mt-1.5">{formatDueDate(task.due_date)}</p>
@@ -168,7 +174,7 @@ export default function HomeScreen({
                   >
                     <div
                       className="w-1 self-stretch rounded-full flex-shrink-0"
-                      style={{ backgroundColor: CATEGORY_COLORS[task.category]?.border }}
+                      style={{ backgroundColor: getCategoryColor(task.category, categories)?.border }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
@@ -180,7 +186,7 @@ export default function HomeScreen({
                     </div>
                     <span
                       className="flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      style={{ backgroundColor: CATEGORY_COLORS[task.category]?.bg, color: CATEGORY_COLORS[task.category]?.text }}
+                      style={{ backgroundColor: getCategoryColor(task.category, categories)?.bg, color: getCategoryColor(task.category, categories)?.text }}
                     >
                       {task.category}
                     </span>
@@ -207,28 +213,42 @@ export default function HomeScreen({
                 value={parseCard.task}
                 onChange={v => handleEditField('task', v)}
               />
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <p className="text-slate-400 text-[10px] font-semibold mb-1">Category</p>
-                  <select
-                    value={parseCard.category || 'Personal'}
-                    onChange={e => handleEditField('category', e.target.value)}
-                    className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-black/10 focus:border-accent-deep"
-                  >
-                    {['School','Work','Personal','Errands','Health'].map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+              <div>
+                <p className="text-slate-400 text-[10px] font-semibold mb-1.5">Category</p>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+                  {[...BUILT_IN_CATEGORIES, ...categories].map(cat => {
+                    const isSelected = (parseCard.category || 'Personal') === cat.name
+                    const catColors  = getCategoryColor(cat.name, categories)
+                    return (
+                      <button
+                        key={cat.name}
+                        type="button"
+                        onClick={() => handleEditField('category', cat.name)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
+                          isSelected ? 'ring-2 ring-offset-1 scale-105' : 'opacity-55 hover:opacity-80'
+                        }`}
+                        style={{ backgroundColor: catColors.bg, color: catColors.text }}
+                      >
+                        <span>{cat.emoji || '📁'}</span>
+                        <span>{cat.name}</span>
+                        {isSelected && (
+                          <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                            <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
-                <div className="flex-1">
-                  <p className="text-slate-400 text-[10px] font-semibold mb-1">Due Date</p>
-                  <input
-                    type="datetime-local"
-                    value={parseCard.due_date ? parseCard.due_date.slice(0, 16) : ''}
-                    onChange={e => handleEditField('due_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                    className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-black/10 focus:border-accent-deep"
-                  />
-                </div>
+              </div>
+              <div>
+                <p className="text-slate-400 text-[10px] font-semibold mb-1">Due Date</p>
+                <input
+                  type="datetime-local"
+                  value={parseCard.due_date ? parseCard.due_date.slice(0, 16) : ''}
+                  onChange={e => handleEditField('due_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                  className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-black/10 focus:border-accent-deep"
+                />
               </div>
             </div>
 

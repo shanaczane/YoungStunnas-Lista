@@ -69,7 +69,7 @@ function fallbackParse(input) {
   } else if (/\btomorrow\b/.test(lower)) {
     due_date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hours, minutes).toISOString()
   } else {
-    const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
     for (let i = 0; i < days.length; i++) {
       if (lower.includes(days[i])) {
         const target = new Date(now)

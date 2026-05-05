@@ -5,13 +5,16 @@ import HomeScreen from './screens/HomeScreen'
 import TasksScreen from './screens/TasksScreen'
 import SpacesScreen from './screens/SpacesScreen'
 import AlertsScreen from './screens/AlertsScreen'
+import ProfileScreen from './screens/ProfileScreen'
 import TaskDetailModal from './screens/TaskDetailModal'
 import BottomNav from './components/BottomNav'
+import { fetchCategories } from './lib/categories'
 
 export default function App() {
   const [session, setSession] = useState(undefined)
   const [screen, setScreen] = useState('home')
   const [tasks, setTasks] = useState([])
+  const [categories, setCategories] = useState([])
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [focusChat, setFocusChat] = useState(false)
 
@@ -35,9 +38,15 @@ export default function App() {
     if (data) setTasks(data)
   }, [])
 
+  const loadCategories = useCallback(async (userId) => {
+    const data = await fetchCategories(userId)
+    setCategories(data)
+  }, [])
+
   useEffect(() => {
     if (!session?.user) return
     fetchTasks(session.user.id)
+    loadCategories(session.user.id)
 
     const channel = supabase
       .channel('tasks-changes')
@@ -50,7 +59,7 @@ export default function App() {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [session, fetchTasks])
+  }, [session, fetchTasks, loadCategories])
 
   function handleTaskCreated(task) {
     setTasks(prev => [task, ...prev])
@@ -110,6 +119,7 @@ export default function App() {
             session={session}
             displayName={displayName}
             tasks={tasks}
+            categories={categories}
             onTaskCreated={handleTaskCreated}
             onNavigate={navigateTo}
             onOpenTask={openTask}
@@ -123,16 +133,31 @@ export default function App() {
             onTaskUpdated={handleTaskUpdated}
             onOpenTask={openTask}
             onNavigate={navigateTo}
+            session={session}
+            displayName={displayName}
+            categories={categories}
+            onCategoriesChanged={() => loadCategories(session.user.id)}
+            onTaskCreated={handleTaskCreated}
           />
         )}
         {screen === 'spaces' && (
-          <SpacesScreen session={session} displayName={displayName} />
+          <SpacesScreen session={session} displayName={displayName} onNavigate={navigateTo} />
         )}
         {screen === 'notifications' && (
           <AlertsScreen
             tasks={tasks}
             session={session}
+            displayName={displayName}
             onOpenTask={openTask}
+            onNavigate={navigateTo}
+          />
+        )}
+        {screen === 'profile' && (
+          <ProfileScreen
+            session={session}
+            displayName={displayName}
+            tasks={tasks}
+            onBack={() => setScreen('home')}
           />
         )}
       </div>
@@ -146,6 +171,7 @@ export default function App() {
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
+          categories={categories}
           onClose={closeTask}
           onUpdate={handleTaskUpdated}
           onDelete={handleTaskDeleted}

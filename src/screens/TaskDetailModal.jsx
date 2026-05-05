@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CATEGORY_COLORS } from '../lib/utils'
+import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji } from '../lib/categories'
 
 const REMINDER_OPTIONS = [
   { label: '15 min before', value: 15 },
@@ -7,7 +7,7 @@ const REMINDER_OPTIONS = [
   { label: '1 day before', value: 1440 },
 ]
 
-export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
+export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, categories = [] }) {
   const [taskName, setTaskName] = useState(task.task_name)
   const [category, setCategory] = useState(task.category || 'Personal')
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
@@ -48,7 +48,8 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
     if (e.target === e.currentTarget) onClose()
   }
 
-  const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.Personal
+  const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
+  const colors = getCategoryColor(category, categories)
 
   return (
     <div
@@ -78,23 +79,38 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete }) {
             />
           </div>
 
-          <div className="flex gap-3 mb-4">
-            <div className="flex-1">
-              <label className="text-slate-400 text-xs font-medium block mb-1.5">Category</label>
-              <select
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
-              >
-                {['School','Work','Personal','Errands','Health'].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+          <div className="mb-4">
+            <label className="text-slate-400 text-xs font-medium block mb-1.5">Category</label>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+              {allCategories.map(cat => {
+                const isSelected = category === cat.name
+                const catColors  = getCategoryColor(cat.name, categories)
+                const catEmoji   = getCategoryEmoji(cat.name, categories)
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setCategory(cat.name)}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all ${
+                      isSelected
+                        ? 'ring-2 ring-offset-1 scale-105'
+                        : 'opacity-60 hover:opacity-90'
+                    }`}
+                    style={isSelected
+                      ? { backgroundColor: catColors.bg, color: catColors.text, ringColor: catColors.border }
+                      : { backgroundColor: catColors.bg, color: catColors.text }
+                    }
+                  >
+                    <span>{catEmoji}</span>
+                    <span>{cat.name}</span>
+                    {isSelected && (
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
             </div>
-            <div
-              className="w-3 self-stretch rounded-full flex-shrink-0 mt-6"
-              style={{ backgroundColor: colors.border }}
-            />
           </div>
 
           <div className="mb-4">
