@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import chatMascot from '../mascots/chat.png'
 import { supabase } from '../lib/supabase'
+import AppLogo from '../components/AppLogo'
+import homeMascot from '../mascots/home-mascot.png'
 import { parseTask } from '../lib/ai'
 import { CATEGORY_COLORS, formatDueDate, getGreeting } from '../lib/utils'
 
@@ -108,12 +109,7 @@ export default function HomeScreen({
       {/* Top bar */}
       <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
         <div className="flex items-center gap-3">
-          <img
-            src={chatMascot}
-            alt="Lista"
-            className="w-16 h-16 object-contain flex-shrink-0"
-            style={{ mixBlendMode: 'multiply' }}
-          />
+          <AppLogo size="md" />
           <div>
             <p className="text-slate-400 text-xs leading-none mb-0.5">{getGreeting()},</p>
             <h1 className="text-slate-900 font-bold text-lg leading-tight">{displayName.split(' ')[0]}</h1>
@@ -297,7 +293,7 @@ function EditableRow({ label, value, onChange }) {
 function EmptyHome() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] px-8 text-center">
-      <img src={chatMascot} alt="Ollie" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
+      <img src={homeMascot} alt="Lista" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
       <p className="text-slate-800 font-semibold text-lg">Type your first task</p>
       <p className="text-slate-400 text-sm mt-2 leading-relaxed">
         Just type naturally below — Lista will organize it for you automatically.
