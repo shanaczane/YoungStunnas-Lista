@@ -1,27 +1,89 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
 import AuthScreen from './screens/AuthScreen'
 import HomeScreen from './screens/HomeScreen'
 import TasksScreen from './screens/TasksScreen'
 import SpacesScreen from './screens/SpacesScreen'
 import AlertsScreen from './screens/AlertsScreen'
+import TaskDetailModal from './screens/TaskDetailModal'
 import BottomNav from './components/BottomNav'
 
 export default function App() {
   const [session, setSession] = useState(undefined)
   const [screen, setScreen] = useState('home')
+  const [tasks, setTasks] = useState([])
+  const [selectedTaskId, setSelectedTaskId] = useState(null)
+  const [focusChat, setFocusChat] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
-
     return () => subscription.unsubscribe()
   }, [])
+
+  const fetchTasks = useCallback(async (userId) => {
+    const { data } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', userId)
+      .is('space_id', null)
+      .order('created_at', { ascending: false })
+    if (data) setTasks(data)
+  }, [])
+
+  useEffect(() => {
+    if (!session?.user) return
+    fetchTasks(session.user.id)
+
+    const channel = supabase
+      .channel('tasks-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tasks',
+        filter: `user_id=eq.${session.user.id}`,
+      }, () => fetchTasks(session.user.id))
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [session, fetchTasks])
+
+  function handleTaskCreated(task) {
+    setTasks(prev => [task, ...prev])
+  }
+
+  async function handleTaskUpdated(id, updates) {
+    const { data } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    if (data) setTasks(prev => prev.map(t => t.id === id ? data : t))
+  }
+
+  async function handleTaskDeleted(id) {
+    await supabase.from('tasks').delete().eq('id', id)
+    setTasks(prev => prev.filter(t => t.id !== id))
+    setSelectedTaskId(null)
+  }
+
+  function openTask(id) {
+    setSelectedTaskId(id)
+  }
+
+  function closeTask() {
+    setSelectedTaskId(null)
+  }
+
+  function navigateTo(tab, opts = {}) {
+    setScreen(tab)
+    if (opts.focusChat) setFocusChat(true)
+  }
 
   if (session === undefined) {
     return (
@@ -31,46 +93,60 @@ export default function App() {
     )
   }
 
-  if (!session) {
-    return <AuthScreen />
-  }
+  if (!session) return <AuthScreen />
 
   const displayName =
     session.user.user_metadata?.display_name ||
     session.user.email?.split('@')[0] ||
     'there'
 
-  const avatarLetter = displayName[0].toUpperCase()
-
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-  }
+  const selectedTask = tasks.find(t => t.id === selectedTaskId) || null
 
   return (
-    <div className="min-h-screen bg-app-bg pb-16">
-      <header className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-accent-deep flex items-center justify-center text-white font-semibold text-sm">
-            {avatarLetter}
-          </div>
-          <div>
-            <p className="text-white text-sm font-semibold leading-tight">{displayName}</p>
-            <p className="text-white/40 text-xs">{session.user.email}</p>
-          </div>
-        </div>
-        <button
-          onClick={handleSignOut}
-          className="text-white/50 hover:text-white text-xs border border-white/20 hover:border-white/40 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          Sign out
-        </button>
-      </header>
+    <div className="min-h-screen bg-app-bg">
+      <div className="pb-16">
+        {screen === 'home' && (
+          <HomeScreen
+            session={session}
+            displayName={displayName}
+            tasks={tasks}
+            onTaskCreated={handleTaskCreated}
+            onNavigate={navigateTo}
+            onOpenTask={openTask}
+            focusChat={focusChat}
+            onFocusChatConsumed={() => setFocusChat(false)}
+          />
+        )}
+        {screen === 'tasks' && (
+          <TasksScreen
+            tasks={tasks}
+            onTaskUpdated={handleTaskUpdated}
+            onOpenTask={openTask}
+            onNavigate={navigateTo}
+          />
+        )}
+        {screen === 'spaces' && (
+          <SpacesScreen session={session} displayName={displayName} />
+        )}
+        {screen === 'notifications' && (
+          <AlertsScreen
+            tasks={tasks}
+            session={session}
+            onOpenTask={openTask}
+          />
+        )}
+      </div>
 
-      {screen === 'home' && <HomeScreen displayName={displayName} />}
-      {screen === 'tasks' && <TasksScreen />}
-      {screen === 'spaces' && <SpacesScreen />}
-      {screen === 'notifications' && <AlertsScreen />}
-      <BottomNav active={screen} onNavigate={setScreen} />
+      <BottomNav active={screen} onNavigate={tab => navigateTo(tab)} />
+
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={closeTask}
+          onUpdate={handleTaskUpdated}
+          onDelete={handleTaskDeleted}
+        />
+      )}
     </div>
   )
 }
