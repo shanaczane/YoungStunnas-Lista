@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { parseTask } from '../lib/ai'
 import { CATEGORY_COLORS, formatDueDate } from '../lib/utils'
@@ -71,13 +71,20 @@ export default function SpacesScreen({ session, displayName }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="flex items-center justify-between px-5 pt-12 pb-4">
-        <h1 className="text-white font-bold text-xl">Spaces</h1>
+      <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
+        <div>
+          <h1 className="text-slate-900 font-bold text-2xl">Spaces</h1>
+          <p className="text-slate-400 text-xs mt-0.5">Collaborate with your team</p>
+        </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="w-8 h-8 rounded-full bg-accent-deep hover:bg-accent-mid flex items-center justify-center text-white text-xl transition-colors"
+          className="w-9 h-9 rounded-full bg-accent-deep flex items-center justify-center text-white transition-colors active:bg-accent-mid"
+          style={{ boxShadow: '0 4px 12px rgba(26,79,214,0.35)' }}
         >
-          +
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
         </button>
       </header>
 
@@ -101,7 +108,7 @@ export default function SpacesScreen({ session, displayName }) {
               <button
                 key={space.id}
                 onClick={() => setActiveSpace(space)}
-                className="w-full bg-card-bg rounded-2xl p-4 border border-white/10 hover:border-accent-light/30 transition-colors text-left"
+                className="w-full bg-card-bg rounded-2xl p-4 border border-black/8 hover:border-accent-light/30 transition-colors text-left"
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-white font-semibold">{space.name}</p>
@@ -121,7 +128,7 @@ export default function SpacesScreen({ session, displayName }) {
                   {(space.space_members || []).length > 5 && (
                     <span className="text-white/30 text-xs">+{space.space_members.length - 5}</span>
                   )}
-                  <span className="text-white/30 text-xs ml-1">
+                  <span className="text-slate-400 text-xs ml-1">
                     {(space.space_members || []).length} member{(space.space_members || []).length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -144,6 +151,23 @@ function SpaceBoard({ space, session, displayName, onBack }) {
   const [showInvite, setShowInvite] = useState(false)
   const inputRef = useRef(null)
 
+  const fetchSpaceTasks = useCallback(async () => {
+    const { data } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('space_id', space.id)
+      .order('created_at', { ascending: false })
+    setTasks(data || [])
+  }, [space.id])
+
+  const fetchMembers = useCallback(async () => {
+    const { data } = await supabase
+      .from('space_members')
+      .select('user_id, display_name')
+      .eq('space_id', space.id)
+    setMembers(data || [])
+  }, [space.id])
+
   useEffect(() => {
     fetchSpaceTasks()
     fetchMembers()
@@ -157,24 +181,7 @@ function SpaceBoard({ space, session, displayName, onBack }) {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [space.id])
-
-  async function fetchSpaceTasks() {
-    const { data } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('space_id', space.id)
-      .order('created_at', { ascending: false })
-    setTasks(data || [])
-  }
-
-  async function fetchMembers() {
-    const { data } = await supabase
-      .from('space_members')
-      .select('user_id, display_name')
-      .eq('space_id', space.id)
-    setMembers(data || [])
-  }
+  }, [space.id, fetchSpaceTasks, fetchMembers])
 
   async function handleSend() {
     const trimmed = input.trim()
@@ -221,13 +228,13 @@ function SpaceBoard({ space, session, displayName, onBack }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="px-5 pt-12 pb-3">
+      <header className="px-5 pt-6 pb-3">
         <button onClick={onBack} className="text-accent-light text-sm mb-3 flex items-center gap-1">
           <span>←</span> All Spaces
         </button>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-white font-bold text-xl">{space.name}</h1>
+            <h1 className="text-slate-900 font-bold text-xl">{space.name}</h1>
             <div className="flex items-center gap-1.5 mt-1.5">
               {members.slice(0, 5).map((m, i) => (
                 <div key={i} className="w-6 h-6 rounded-full bg-accent-deep flex items-center justify-center text-white text-[10px] font-semibold border border-app-bg">
@@ -237,7 +244,7 @@ function SpaceBoard({ space, session, displayName, onBack }) {
               {space.owner_id === session.user.id && (
                 <button
                   onClick={() => setShowInvite(true)}
-                  className="w-6 h-6 rounded-full border border-dashed border-white/30 flex items-center justify-center text-white/40 text-xs hover:text-white hover:border-white/60 transition-colors"
+                  className="w-6 h-6 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-white/40 text-xs hover:text-white hover:border-white/60 transition-colors"
                 >
                   +
                 </button>
@@ -262,8 +269,8 @@ function SpaceBoard({ space, session, displayName, onBack }) {
       {/* Invite modal */}
       {showInvite && (
         <div className="mx-5 mb-4 bg-card-bg rounded-2xl p-4 border border-accent-mid/30">
-          <p className="text-white/40 text-xs mb-2">Share this link to invite members</p>
-          <p className="text-accent-pale text-xs break-all font-mono bg-white/5 rounded-lg px-3 py-2">{inviteLink}</p>
+          <p className="text-slate-400 text-xs mb-2">Share this link to invite members</p>
+          <p className="text-accent-deep text-xs break-all font-mono bg-slate-50 rounded-lg px-3 py-2">{inviteLink}</p>
           <button
             onClick={() => { navigator.clipboard?.writeText(inviteLink); setShowInvite(false) }}
             className="mt-3 w-full bg-accent-deep text-white py-2 rounded-xl text-sm font-medium hover:bg-accent-mid transition-colors"
@@ -276,7 +283,7 @@ function SpaceBoard({ space, session, displayName, onBack }) {
       <div className="flex-1 overflow-y-auto px-5 pb-44 space-y-2">
         {displayed.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[30vh] text-center">
-            <p className="text-white/30 text-sm">No tasks yet. Type below to add one.</p>
+            <p className="text-slate-400 text-sm">No tasks yet. Type below to add one.</p>
           </div>
         ) : (
           displayed.map(task => <SpaceTaskCard key={task.id} task={task} />)
@@ -304,7 +311,7 @@ function SpaceBoard({ space, session, displayName, onBack }) {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => setParseCard(null)}
-                className="flex-1 py-2 rounded-xl border border-white/20 text-white/60 text-sm"
+                className="flex-1 py-2 rounded-xl border border-black/10 text-slate-500 text-sm"
               >
                 Cancel
               </button>
@@ -318,7 +325,7 @@ function SpaceBoard({ space, session, displayName, onBack }) {
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-card-bg border border-white/15 rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-2 bg-white border border-black/10 rounded-2xl px-4 py-3 shadow-sm">
           <input
             ref={inputRef}
             type="text"
@@ -326,7 +333,7 @@ function SpaceBoard({ space, session, displayName, onBack }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSend() } }}
             placeholder={`Add a task for the team... "Mel finalize slides by Sunday"`}
-            className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/25"
+            className="flex-1 bg-transparent text-slate-800 text-sm outline-none placeholder:text-slate-300"
           />
           <button
             onClick={handleSend}
@@ -369,7 +376,7 @@ function SpaceTaskCard({ task }) {
             {task.assignee[0].toUpperCase()}
           </div>
         ) : (
-          <div className="w-7 h-7 rounded-full border border-dashed border-white/20 flex items-center justify-center text-white/20 text-xs">
+          <div className="w-7 h-7 rounded-full border border-dashed border-white/20 flex items-center justify-center text-slate-300 text-xs">
             ?
           </div>
         )}
@@ -382,7 +389,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
   const [name, setName] = useState('')
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
-      <div className="w-full bg-app-bg rounded-t-3xl p-6 border-t border-white/10">
+      <div className="w-full bg-white rounded-t-3xl p-6 border-t border-black/8">
         <h2 className="text-white font-bold text-lg mb-4">Create a Space</h2>
         <input
           type="text"
@@ -390,11 +397,11 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
           onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onConfirm(name.trim()) }}
           placeholder="Space name (e.g. Sprint 3, Study Group)"
-          className="w-full bg-card-bg text-white text-sm rounded-xl px-4 py-3 outline-none border border-white/10 focus:border-accent-mid placeholder:text-white/25 mb-4"
+          className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300 mb-4"
           autoFocus
         />
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-white/20 text-white/60 text-sm">Cancel</button>
+          <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm">Cancel</button>
           <button
             onClick={() => name.trim() && onConfirm(name.trim())}
             disabled={!name.trim()}
@@ -411,13 +418,9 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
 function EmptySpaces({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" className="text-white/20">
-          <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-        </svg>
-      </div>
-      <p className="text-white/50 text-sm mb-1">No spaces yet</p>
-      <p className="text-white/25 text-xs mb-5">Create a space to collaborate with your team</p>
+      <img src="/mascots/spaces.png" alt="Ollie" className="w-36 h-36 object-contain mb-2" />
+      <p className="text-slate-500 text-sm mb-1">No spaces yet</p>
+      <p className="text-slate-300 text-xs mb-5">Create a space to collaborate with your team</p>
       <button
         onClick={onCreate}
         className="bg-accent-deep hover:bg-accent-mid text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"

@@ -4,27 +4,24 @@ import { supabase } from '../lib/supabase'
 export default function AuthScreen({ defaultTab = 'login' }) {
   const [tab, setTab] = useState(defaultTab)
 
-  function handleSignUpSuccess() {
-    setTab('login')
-  }
-
   return (
     <div className="min-h-screen bg-app-bg flex flex-col items-center justify-center px-6 py-12">
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-white tracking-tight">Lista</h1>
-        <p className="text-accent-pale text-sm mt-2">Just type. We handle the rest.</p>
+      <div className="mb-6 text-center">
+        <img src="/mascots/auth.png" alt="Ollie" className="w-28 h-28 object-contain mx-auto mb-3" />
+        <h1 className="text-4xl font-bold text-accent-deep tracking-tight">Lista</h1>
+        <p className="text-slate-400 text-sm mt-2">Just type. We handle the rest.</p>
       </div>
 
-      <div className="w-full max-w-sm bg-card-bg rounded-2xl overflow-hidden shadow-2xl">
-        <div className="flex border-b border-white/10">
+      <div className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl border border-black/8">
+        <div className="flex border-b border-black/8">
           {['login', 'signup'].map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
                 tab === t
-                  ? 'text-white border-b-2 border-accent-deep -mb-px'
-                  : 'text-white/40 hover:text-white/70'
+                  ? 'text-accent-deep border-b-2 border-accent-deep -mb-px'
+                  : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               {t === 'login' ? 'Log In' : 'Sign Up'}
@@ -33,15 +30,12 @@ export default function AuthScreen({ defaultTab = 'login' }) {
         </div>
 
         <div className="p-6">
-          {tab === 'login' ? <LoginForm /> : <SignUpForm onSuccess={handleSignUpSuccess} />}
-
+          {tab === 'login' ? <LoginForm /> : <SignUpForm onSuccess={() => setTab('login')} />}
           <Divider />
-
           <GoogleButton />
-
           {tab === 'login' && (
             <p className="text-center mt-4">
-              <button className="text-accent-light text-xs hover:underline">
+              <button className="text-accent-deep text-xs hover:underline">
                 Forgot password?
               </button>
             </p>
@@ -71,7 +65,7 @@ function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Field label="Email" type="email" value={email} onChange={setEmail} />
       <Field label="Password" type="password" value={password} onChange={setPassword} />
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-red-500 text-xs">{error}</p>}
       <SubmitButton loading={loading} label="Log In" loadingLabel="Signing in…" />
     </form>
   )
@@ -93,7 +87,6 @@ function SignUpForm({ onSuccess }) {
     if (!email) errs.email = 'Email is required'
     if (password.length < 6) errs.password = 'Password must be at least 6 characters'
     if (password !== confirm) errs.confirm = 'Passwords do not match'
-
     if (Object.keys(errs).length) { setErrors(errs); return }
 
     setErrors({})
@@ -104,7 +97,6 @@ function SignUpForm({ onSuccess }) {
       options: { data: { display_name: displayName.trim() } },
     })
     setLoading(false)
-
     if (error) { setErrors({ general: error.message }); return }
     setCreated(true)
   }
@@ -112,11 +104,9 @@ function SignUpForm({ onSuccess }) {
   if (created) {
     return (
       <div className="flex flex-col items-center gap-4 py-4 text-center">
-        <div className="w-12 h-12 rounded-full bg-accent-deep/20 flex items-center justify-center text-2xl">
-          ✓
-        </div>
-        <p className="text-white font-semibold">Account created!</p>
-        <p className="text-white/50 text-xs">You can now log in with your credentials.</p>
+        <div className="w-12 h-12 rounded-full bg-accent-pale flex items-center justify-center text-accent-deep text-2xl font-bold">✓</div>
+        <p className="text-slate-800 font-semibold">Account created!</p>
+        <p className="text-slate-400 text-xs">You can now log in with your credentials.</p>
         <button
           onClick={onSuccess}
           className="w-full bg-accent-deep hover:bg-accent-mid text-white py-3 rounded-xl font-semibold text-sm transition-colors mt-2"
@@ -129,35 +119,19 @@ function SignUpForm({ onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field
-        label="Display Name"
-        type="text"
-        value={displayName}
+      <Field label="Display Name" type="text" value={displayName}
         onChange={v => { setDisplayName(v); setErrors(e => ({ ...e, displayName: '' })) }}
-        error={errors.displayName}
-      />
-      <Field
-        label="Email"
-        type="email"
-        value={email}
+        error={errors.displayName} />
+      <Field label="Email" type="email" value={email}
         onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: '' })) }}
-        error={errors.email}
-      />
-      <Field
-        label="Password"
-        type="password"
-        value={password}
+        error={errors.email} />
+      <Field label="Password" type="password" value={password}
         onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
-        error={errors.password}
-      />
-      <Field
-        label="Confirm Password"
-        type="password"
-        value={confirm}
+        error={errors.password} />
+      <Field label="Confirm Password" type="password" value={confirm}
         onChange={v => { setConfirm(v); setErrors(e => ({ ...e, confirm: '' })) }}
-        error={errors.confirm}
-      />
-      {errors.general && <p className="text-red-400 text-xs">{errors.general}</p>}
+        error={errors.confirm} />
+      {errors.general && <p className="text-red-500 text-xs">{errors.general}</p>}
       <SubmitButton loading={loading} label="Create Account" loadingLabel="Creating account…" />
     </form>
   )
@@ -166,16 +140,16 @@ function SignUpForm({ onSuccess }) {
 function Field({ label, type, value, onChange, error }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-white/60 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className={`w-full bg-white/10 text-white text-sm rounded-lg px-3 py-2.5 outline-none
-          border transition-colors placeholder:text-white/25
-          ${error ? 'border-red-400' : 'border-transparent focus:border-accent-mid'}`}
+        className={`w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none
+          border transition-colors placeholder:text-slate-300
+          ${error ? 'border-red-400' : 'border-black/10 focus:border-accent-deep'}`}
       />
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   )
 }
@@ -196,9 +170,9 @@ function SubmitButton({ loading, label, loadingLabel }) {
 function Divider() {
   return (
     <div className="flex items-center gap-3 my-5">
-      <div className="flex-1 h-px bg-white/10" />
-      <span className="text-white/30 text-xs">or</span>
-      <div className="flex-1 h-px bg-white/10" />
+      <div className="flex-1 h-px bg-black/8" />
+      <span className="text-slate-300 text-xs">or</span>
+      <div className="flex-1 h-px bg-black/8" />
     </div>
   )
 }
@@ -214,8 +188,8 @@ function GoogleButton() {
   return (
     <button
       onClick={handleGoogle}
-      className="w-full border border-white/20 hover:border-white/40 text-white py-3
-        rounded-xl text-sm font-medium flex items-center justify-center gap-2.5 transition-colors"
+      className="w-full border border-black/10 hover:border-slate-300 text-slate-700 py-3
+        rounded-xl text-sm font-medium flex items-center justify-center gap-2.5 transition-colors hover:bg-slate-50"
     >
       <GoogleIcon />
       Continue with Google
