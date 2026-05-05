@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import AppLogo from '../components/AppLogo'
 import ProfileAvatar from '../components/ProfileAvatar'
+import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
 import { parseTask } from '../lib/ai'
 import { formatDueDate, getGreeting } from '../lib/utils'
@@ -110,7 +111,7 @@ export default function HomeScreen({
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
+      <ScreenHeader>
         <div className="flex items-center gap-3">
           <AppLogo size="md" />
           <div>
@@ -127,7 +128,7 @@ export default function HomeScreen({
           </button>
           <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
         </div>
-      </header>
+      </ScreenHeader>
 
       <div className="flex-1 overflow-y-auto pb-40">
         {tasks.length === 0 ? (

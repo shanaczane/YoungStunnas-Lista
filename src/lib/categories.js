@@ -61,6 +61,16 @@ export async function createCategory(userId, { name, color, emoji }) {
   return { data, error }
 }
 
+export async function updateCategory(id, { name, color, emoji }) {
+  const { data, error } = await supabase
+    .from('categories')
+    .update({ name: name.trim(), color, emoji })
+    .eq('id', id)
+    .select()
+    .single()
+  return { data, error }
+}
+
 export async function deleteCategory(id) {
   return supabase.from('categories').delete().eq('id', id)
 }

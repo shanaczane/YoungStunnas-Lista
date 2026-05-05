@@ -137,6 +137,7 @@ export default function App() {
             displayName={displayName}
             categories={categories}
             onCategoriesChanged={() => loadCategories(session.user.id)}
+            onTasksChanged={() => fetchTasks(session.user.id)}
             onTaskCreated={handleTaskCreated}
           />
         )}

@@ -1,12 +1,15 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import ProfileAvatar from '../components/ProfileAvatar'
+import ScreenHeader from '../components/ScreenHeader'
 import { formatDueDate, getDateGroup } from '../lib/utils'
 import {
   BUILT_IN_CATEGORIES,
   getCategoryColor,
   getCategoryEmoji,
   createCategory,
+  updateCategory,
+  deleteCategory,
 } from '../lib/categories'
 import { parseTask } from '../lib/ai'
 import mascot from '../mascots/home-mascot.png'
@@ -27,11 +30,12 @@ const COLOR_OPTIONS = [
 
 export default function TasksScreen({
   tasks, onTaskUpdated, onOpenTask, onNavigate,
-  session, displayName, categories, onCategoriesChanged, onTaskCreated,
+  session, displayName, categories, onCategoriesChanged, onTaskCreated, onTasksChanged,
 }) {
   const [activeCategory, setActiveCategory] = useState(null)
   const [collapsed, setCollapsed]           = useState({})
   const [showNewCategory, setShowNewCategory] = useState(false)
+  const [categoryToEdit, setCategoryToEdit] = useState(null)
   const [input, setInput]       = useState('')
   const [parsing, setParsing]   = useState(false)
   const [parseCard, setParseCard] = useState(null)
@@ -39,6 +43,66 @@ export default function TasksScreen({
   const inputRef = useRef(null)
 
   const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
+
+  const isCustomCategory = name => categories.some(cat => cat.name === name)
+
+  function handleRequestEditCategory(category, taskCount) {
+    setCategoryToEdit({ ...category, taskCount })
+  }
+
+  async function handleEditCategory(values) {
+    if (!categoryToEdit?.id) return { error: 'Could not find this category.' }
+
+    const oldName = categoryToEdit.name
+    const newName = values.name.trim()
+    const { data, error } = await updateCategory(categoryToEdit.id, { ...values, name: newName })
+
+    if (error) return { error: 'Could not save changes. Try again.' }
+
+    if (newName !== oldName) {
+      const { error: moveError } = await supabase
+        .from('tasks')
+        .update({ category: newName })
+        .eq('user_id', session.user.id)
+        .eq('category', oldName)
+
+      if (moveError) {
+        await onCategoriesChanged?.()
+        return { error: 'Saved category, but could not update its tasks.' }
+      }
+    }
+
+    await onCategoriesChanged?.()
+    await onTasksChanged?.()
+    setActiveCategory(prev => prev?.name === oldName ? data : prev)
+    setCategoryToEdit(null)
+    return { data }
+  }
+
+  async function handleDeleteCategory() {
+    if (!categoryToEdit?.id) return { error: 'Could not find this category.' }
+
+    const tasksInCategory = tasks.filter(t => t.category === categoryToEdit.name)
+
+    if (tasksInCategory.length > 0) {
+      const { error: moveError } = await supabase
+        .from('tasks')
+        .update({ category: 'Personal' })
+        .eq('user_id', session.user.id)
+        .eq('category', categoryToEdit.name)
+
+      if (moveError) return { error: 'Could not move tasks to Personal. Try again.' }
+    }
+
+    const { error } = await deleteCategory(categoryToEdit.id)
+    if (error) return { error: 'Could not delete category. Try again.' }
+
+    await onCategoriesChanged?.()
+    await onTasksChanged?.()
+    setActiveCategory(prev => prev?.name === categoryToEdit.name ? null : prev)
+    setCategoryToEdit(null)
+    return { data: true }
+  }
 
   // ── Folder view ────────────────────────────────────────────────────────────
   if (!activeCategory) {
@@ -52,7 +116,7 @@ export default function TasksScreen({
 
     return (
       <div className="flex flex-col min-h-screen bg-app-bg">
-        <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
+        <ScreenHeader>
           <div>
             <h1 className="text-slate-900 font-bold text-2xl">My Tasks</h1>
             <p className="text-slate-400 text-xs mt-0.5">
@@ -60,7 +124,7 @@ export default function TasksScreen({
             </p>
           </div>
           <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
-        </header>
+        </ScreenHeader>
 
         <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4">
           <div className="space-y-3">
@@ -68,31 +132,49 @@ export default function TasksScreen({
             {withTasks.map(folder => {
               const colors = getCategoryColor(folder.name, categories)
               const emoji  = getCategoryEmoji(folder.name, categories)
+              const canEdit = isCustomCategory(folder.name)
               return (
-                <button
+                <div
                   key={folder.name}
-                  onClick={() => setActiveCategory(folder)}
                   className="w-full bg-white rounded-2xl p-4 card-elevated flex items-center gap-4 transition-all active:scale-[0.99] text-left"
                 >
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ backgroundColor: colors.bg }}
+                  <button
+                    onClick={() => setActiveCategory(folder)}
+                    className="flex flex-1 items-center gap-4 min-w-0 text-left"
                   >
-                    {emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: colors.border }} />
-                      <p className="text-slate-900 font-bold text-base truncate">{folder.name}</p>
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+                      style={{ backgroundColor: colors.bg }}
+                    >
+                      {emoji}
                     </div>
-                    <p className="text-slate-400 text-xs mt-0.5 ml-4">
-                      {folder.taskCount} task{folder.taskCount !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 flex-shrink-0">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: colors.border }} />
+                        <p className="text-slate-900 font-bold text-base truncate">{folder.name}</p>
+                      </div>
+                      <p className="text-slate-400 text-xs mt-0.5 ml-4">
+                        {folder.taskCount} task{folder.taskCount !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 flex-shrink-0">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleRequestEditCategory(folder, folder.taskCount)}
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors flex-shrink-0"
+                      aria-label={`Edit ${folder.name} category`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
               )
             })}
 
@@ -101,22 +183,37 @@ export default function TasksScreen({
               const colors = getCategoryColor(cat.name, categories)
               const emoji  = getCategoryEmoji(cat.name, categories)
               return (
-                <button
+                <div
                   key={cat.name}
-                  onClick={() => setActiveCategory(cat)}
                   className="w-full bg-white/60 rounded-2xl p-4 border border-dashed border-slate-200 flex items-center gap-4 transition-all active:scale-[0.99] text-left"
                 >
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 opacity-50"
-                    style={{ backgroundColor: colors.bg }}
+                  <button
+                    onClick={() => setActiveCategory(cat)}
+                    className="flex flex-1 items-center gap-4 min-w-0 text-left"
                   >
-                    {emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-slate-400 font-bold text-base">{cat.name}</p>
-                    <p className="text-slate-300 text-xs mt-0.5">No tasks yet</p>
-                  </div>
-                </button>
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 opacity-50"
+                      style={{ backgroundColor: colors.bg }}
+                    >
+                      {emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-400 font-bold text-base truncate">{cat.name}</p>
+                      <p className="text-slate-300 text-xs mt-0.5">No tasks yet</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRequestEditCategory(cat, 0)}
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors flex-shrink-0"
+                    aria-label={`Edit ${cat.name} category`}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9"/>
+                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                    </svg>
+                  </button>
+                </div>
               )
             })}
 
@@ -150,8 +247,19 @@ export default function TasksScreen({
         {showNewCategory && (
           <NewCategoryModal
             session={session}
+            categories={categories}
             onCreated={() => { setShowNewCategory(false); onCategoriesChanged() }}
             onCancel={() => setShowNewCategory(false)}
+          />
+        )}
+        {categoryToEdit && (
+          <NewCategoryModal
+            session={session}
+            category={categoryToEdit}
+            categories={categories}
+            onSaveCategory={handleEditCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onCancel={() => setCategoryToEdit(null)}
           />
         )}
       </div>
@@ -168,6 +276,7 @@ export default function TasksScreen({
   }
   const colors = getCategoryColor(activeCategory?.name, categories)
   const emoji  = getCategoryEmoji(activeCategory?.name, categories)
+  const canEditActiveCategory = isCustomCategory(activeCategory?.name)
 
   // ── Category detail: task creation handlers ──────────────────────────────
   async function handleSend() {
@@ -220,17 +329,20 @@ export default function TasksScreen({
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="px-5 pt-6 pb-4 bg-white border-b border-black/6">
-        <button
-          onClick={() => { setActiveCategory(null); setParseCard(null); setInput('') }}
-          className="flex items-center gap-1.5 text-accent-deep text-sm mb-3 font-medium"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6"/>
-          </svg>
-          All Categories
-        </button>
-        <div className="flex items-center justify-between">
+      <ScreenHeader className="px-5 pt-6 pb-4 bg-white border-b border-black/6">
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={() => { setActiveCategory(null); setParseCard(null); setInput('') }}
+            className="flex items-center gap-1.5 text-accent-deep text-sm font-medium"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            All Categories
+          </button>
+          <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
+        </div>
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
               className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
@@ -245,14 +357,26 @@ export default function TasksScreen({
               </p>
             </div>
           </div>
-          <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
+          {canEditActiveCategory && (
+            <button
+              type="button"
+              onClick={() => handleRequestEditCategory(activeCategory, catTasks.length)}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors flex-shrink-0"
+              aria-label={`Edit ${activeCategory.name} category`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+              </svg>
+            </button>
+          )}
         </div>
         <div className="h-0.5 rounded-full mt-3 opacity-30" style={{ backgroundColor: colors.border }} />
-      </header>
+      </ScreenHeader>
 
       <div className="flex-1 overflow-y-auto px-5 pb-44 pt-4 space-y-6">
         {catTasks.length === 0 ? (
-          <EmptyCategory />
+          <EmptyCategory onNavigate={onNavigate} />
         ) : (
           DATE_GROUP_ORDER.filter(g => grouped[g]?.length).map(group => (
             <section key={group}>
@@ -392,6 +516,17 @@ export default function TasksScreen({
           </button>
         </div>
       </div>
+
+      {categoryToEdit && (
+        <NewCategoryModal
+          session={session}
+          category={categoryToEdit}
+          categories={categories}
+          onSaveCategory={handleEditCategory}
+          onDeleteCategory={handleDeleteCategory}
+          onCancel={() => setCategoryToEdit(null)}
+        />
+      )}
     </div>
   )
 }
@@ -431,30 +566,69 @@ function TaskCard({ task, colors, onToggle, onOpen }) {
   )
 }
 
-function NewCategoryModal({ session, onCreated, onCancel }) {
-  const [name,   setName]   = useState('')
-  const [emoji,  setEmoji]  = useState('📁')
-  const [color,  setColor]  = useState('#a855f7')
+function NewCategoryModal({ session, category, categories = [], onCreated, onSaveCategory, onDeleteCategory, onCancel }) {
+  const isEditing = Boolean(category)
+  const [name,   setName]   = useState(category?.name || '')
+  const [emoji,  setEmoji]  = useState(category?.emoji || '📁')
+  const [color,  setColor]  = useState(category?.color || '#a855f7')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error,  setError]  = useState('')
 
   async function handleSave() {
-    if (!name.trim()) return
+    const trimmed = name.trim()
+    if (!trimmed) return
+
+    const duplicateBuiltIn = BUILT_IN_CATEGORIES.some(cat => cat.name.toLowerCase() === trimmed.toLowerCase())
+    const duplicateCustom = categories.some(cat =>
+      cat.id !== category?.id && cat.name.toLowerCase() === trimmed.toLowerCase()
+    )
+    if (duplicateBuiltIn || duplicateCustom) {
+      setError('A category with this name already exists.')
+      return
+    }
+
     setSaving(true)
     setError('')
-    const { error: err } = await createCategory(session.user.id, { name, color, emoji })
+    const result = isEditing
+      ? await onSaveCategory?.({ name: trimmed, color, emoji })
+      : await createCategory(session.user.id, { name: trimmed, color, emoji })
     setSaving(false)
+    const err = result?.error
     if (err) { setError('Could not save — try again.'); return }
-    onCreated()
+    if (isEditing) onCancel()
+    else onCreated()
+  }
+
+  async function handleDelete() {
+    if (!isEditing || deleting) return
+    setDeleting(true)
+    setError('')
+    const result = await onDeleteCategory?.()
+    setDeleting(false)
+
+    if (result?.error) {
+      setError(result.error)
+      return
+    }
+
+    onCancel()
   }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onCancel() }}
+      onClick={e => {
+        if (e.target !== e.currentTarget || saving || deleting) return
+        if (showDeleteConfirm) setShowDeleteConfirm(false)
+        else onCancel()
+      }}
     >
       <div className="w-full bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-slate-900 font-bold text-lg mb-5">New Category</h2>
+        <h2 className="text-slate-900 font-bold text-lg mb-5">
+          {isEditing ? 'Edit Category' : 'New Category'}
+        </h2>
 
         {/* Live preview */}
         <div className="flex items-center gap-3 mb-5 p-3 bg-slate-50 rounded-2xl">
@@ -466,7 +640,9 @@ function NewCategoryModal({ session, onCreated, onCancel }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-slate-800 font-bold text-base truncate">{name || 'Category name'}</p>
-            <p className="text-slate-400 text-xs">0 tasks</p>
+            <p className="text-slate-400 text-xs">
+              {isEditing ? `${category.taskCount || 0} task${category.taskCount !== 1 ? 's' : ''}` : '0 tasks'}
+            </p>
           </div>
           <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
         </div>
@@ -536,35 +712,91 @@ function NewCategoryModal({ session, onCreated, onCancel }) {
         <div className="flex gap-3">
           <button
             onClick={onCancel}
+            disabled={saving || deleting}
             className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || saving}
+            disabled={!name.trim() || saving || deleting}
             className="flex-1 py-3 rounded-xl bg-accent-deep text-white text-sm font-bold disabled:opacity-40 transition-colors active:bg-accent-mid"
           >
-            {saving ? 'Creating…' : 'Create Category'}
+            {saving
+              ? (isEditing ? 'Saving…' : 'Creating…')
+              : (isEditing ? 'Save Changes' : 'Create Category')}
           </button>
         </div>
+
+        {isEditing && (
+          <button
+            onClick={() => { setError(''); setShowDeleteConfirm(true) }}
+            disabled={saving || deleting}
+            className="w-full mt-3 py-3 rounded-xl border border-black/10 text-slate-400 text-sm font-medium transition-colors hover:text-red-500 hover:border-red-200 disabled:opacity-50"
+          >
+            {deleting
+              ? 'Deleting…'
+              : showDeleteConfirm
+                ? `Tap again to delete${category.taskCount ? ` and move ${category.taskCount} task${category.taskCount !== 1 ? 's' : ''}` : ''}`
+                : 'Delete Category'}
+          </button>
+        )}
       </div>
+      {showDeleteConfirm && (
+        <DeleteCategoryConfirmSheet
+          category={category}
+          deleting={deleting}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   )
 }
 
-function EmptyTasks({ onNavigate }) {
+function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm }) {
+  const taskCount = category.taskCount || 0
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-      <img src={mascot} alt="Lista" className="w-32 h-32 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
-      <p className="text-slate-500 font-semibold text-sm">No tasks yet</p>
-      <p className="text-slate-400 text-xs mt-1 mb-4">Create a category or add your first task</p>
-      <button
-        onClick={() => onNavigate('home', { focusChat: true })}
-        className="border border-black/10 text-slate-500 text-sm px-4 py-2 rounded-xl hover:text-accent-deep hover:border-accent-deep/30 transition-colors"
-      >
-        Add a task
-      </button>
+    <div
+      className="fixed inset-0 z-[60] flex items-end bg-black/50 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget && !deleting) onCancel() }}
+    >
+      <div className="w-full bg-white rounded-t-3xl p-6 shadow-2xl">
+        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M8 6V4h8v2"/>
+            <path d="M19 6l-1 14H6L5 6"/>
+            <path d="M10 11v5"/>
+            <path d="M14 11v5"/>
+          </svg>
+        </div>
+
+        <h3 className="text-slate-900 font-bold text-lg mb-1">Delete {category.name}?</h3>
+        <p className="text-slate-400 text-sm leading-relaxed mb-5">
+          {taskCount > 0
+            ? `${taskCount} task${taskCount !== 1 ? 's' : ''} will move to Personal before this category is deleted.`
+            : 'This empty category will be permanently removed.'}
+        </p>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-bold disabled:opacity-40 transition-colors active:bg-red-600"
+          >
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

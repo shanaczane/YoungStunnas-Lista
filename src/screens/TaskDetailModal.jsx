@@ -49,7 +49,6 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   }
 
   const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
-  const colors = getCategoryColor(category, categories)
 
   return (
     <div

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import ScreenHeader from '../components/ScreenHeader'
 
 const THEMES = [
   { id: 'system', label: 'System Default' },
@@ -9,7 +10,7 @@ const THEMES = [
 
 const CATEGORIES = ['School', 'Work', 'Personal', 'Errands', 'Health']
 
-export default function ProfileScreen({ session, displayName, tasks, onBack }) {
+export default function ProfileScreen({ session, displayName, tasks, onBack, onSignOut }) {
   const [editing, setEditing]           = useState(false)
   const [nameInput, setNameInput]       = useState(displayName)
   const [saving, setSaving]             = useState(false)
@@ -17,6 +18,7 @@ export default function ProfileScreen({ session, displayName, tasks, onBack }) {
   const [theme, setTheme]               = useState(() => localStorage.getItem('lista-theme') || 'system')
   const [avatarUrl, setAvatarUrl]       = useState(session?.user?.user_metadata?.avatar_url || null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const fileInputRef = useRef(null)
 
   const email    = session?.user?.email || ''
@@ -59,24 +61,51 @@ export default function ProfileScreen({ session, displayName, tasks, onBack }) {
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (!session?.user?.id) {
+      setSaveMsg('You must be signed in to upload a photo.')
+      setTimeout(() => setSaveMsg(''), 3000)
+      e.target.value = ''
+      return
+    }
+
+    if (!file.type?.startsWith('image/')) {
+      setSaveMsg('Please select a valid image file.')
+      setTimeout(() => setSaveMsg(''), 3000)
+      e.target.value = ''
+      return
+    }
+
+    const maxBytes = 5 * 1024 * 1024
+    if (file.size > maxBytes) {
+      setSaveMsg('Image must be 5MB or smaller.')
+      setTimeout(() => setSaveMsg(''), 3000)
+      e.target.value = ''
+      return
+    }
+
     setUploadingAvatar(true)
-    const ext  = file.name.split('.').pop()
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
     const path = `${session.user.id}/avatar.${ext}`
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(path, file, { upsert: true })
     if (uploadError) {
-      setSaveMsg('Could not upload image — check your Supabase Storage bucket.')
+      const reason = uploadError.message || uploadError.error || 'Unknown storage error.'
+      setSaveMsg(`Could not upload image: ${reason}`)
       setTimeout(() => setSaveMsg(''), 3000)
       setUploadingAvatar(false)
+      e.target.value = ''
       return
     }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-    await supabase.auth.updateUser({ data: { avatar_url: publicUrl } })
-    setAvatarUrl(publicUrl + '?t=' + Date.now())
+    const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`
+    await supabase.auth.updateUser({ data: { avatar_url: cacheBustedUrl } })
+    setAvatarUrl(cacheBustedUrl)
     setSaveMsg('Photo updated!')
     setTimeout(() => setSaveMsg(''), 2000)
     setUploadingAvatar(false)
+    e.target.value = ''
   }
 
   function selectTheme(id) {
@@ -84,14 +113,31 @@ export default function ProfileScreen({ session, displayName, tasks, onBack }) {
     localStorage.setItem('lista-theme', id)
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut()
+async function handleSignOut() {
+  const { error } = await supabase.auth.signOut()
+
+  if (error) {
+    setSaveMsg('Failed to log out. Try again.')
+    return
+  }
+
+  onSignOut?.() // notify parent (navigation, cleanup, etc.)
+}
+
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        theme={theme}
+        onSelectTheme={selectTheme}
+        onBack={() => setShowSettings(false)}
+      />
+    )
   }
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       {/* Header */}
-      <header className="flex items-center gap-3 px-5 pt-6 pb-4 bg-white border-b border-black/6">
+      <ScreenHeader className="flex items-center gap-3 px-5 pt-6 pb-4 bg-white border-b border-black/6">
         <button
           onClick={onBack}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors flex-shrink-0"
@@ -102,7 +148,7 @@ export default function ProfileScreen({ session, displayName, tasks, onBack }) {
           </svg>
         </button>
         <h1 className="text-slate-900 font-bold text-xl">Profile</h1>
-      </header>
+      </ScreenHeader>
 
       <div className="flex-1 overflow-y-auto pb-24">
 
@@ -243,15 +289,68 @@ export default function ProfileScreen({ session, displayName, tasks, onBack }) {
           )}
         </div>
 
-        {/* Theme preferences */}
+        {/* Settings */}
         <div className="mx-5 mt-4">
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-full bg-white rounded-2xl card-elevated px-4 py-3.5 text-left text-slate-700 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition-colors"
+          >
+            <span className="flex items-center gap-3">
+              <span className="text-slate-400">
+                <SettingsIcon />
+              </span>
+              Settings
+            </span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Sign out */}
+        <div className="mx-5 mt-4">
+          <button
+            onClick={handleSignOut}
+            
+            className="w-full bg-white rounded-2xl card-elevated px-4 py-3.5 text-left text-red-500 text-sm font-semibold flex items-center gap-3 hover:bg-red-50 transition-colors"
+          >
+            <span className="text-red-400">
+              <LogoutIcon />
+            </span>
+            Log out
+          </button>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+function SettingsScreen({ theme, onSelectTheme, onBack }) {
+  return (
+    <div className="flex flex-col min-h-screen bg-app-bg">
+      <ScreenHeader className="flex items-center gap-3 px-5 pt-6 pb-4 bg-white border-b border-black/6">
+        <button
+          onClick={onBack}
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors flex-shrink-0"
+          aria-label="Go back"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <h1 className="text-slate-900 font-bold text-xl">Settings</h1>
+      </ScreenHeader>
+
+      <div className="flex-1 overflow-y-auto pb-24">
+        <div className="mx-5 mt-5">
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Appearance</p>
           <div className="bg-white rounded-2xl card-elevated overflow-hidden">
             {THEMES.map((t, i) => (
               <button
                 key={t.id}
                 id={`profile-theme-${t.id}`}
-                onClick={() => selectTheme(t.id)}
+                onClick={() => onSelectTheme(t.id)}
                 className={`w-full flex items-center justify-between px-4 py-3.5 text-sm transition-colors ${
                   i < THEMES.length - 1 ? 'border-b border-black/5' : ''
                 } ${
@@ -271,7 +370,6 @@ export default function ProfileScreen({ session, displayName, tasks, onBack }) {
           </div>
         </div>
 
-        {/* General Settings */}
         <div className="mx-5 mt-4">
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Settings</p>
           <div className="bg-white rounded-2xl card-elevated overflow-hidden">
@@ -303,22 +401,7 @@ export default function ProfileScreen({ session, displayName, tasks, onBack }) {
           </div>
         </div>
 
-        {/* Sign out */}
-        <div className="mx-5 mt-4">
-          <button
-            onClick={handleSignOut}
-            className="w-full bg-white rounded-2xl card-elevated px-4 py-3.5 text-left text-red-500 text-sm font-semibold flex items-center gap-3 hover:bg-red-50 transition-colors"
-          >
-            <span className="text-red-400">
-              <LogoutIcon />
-            </span>
-            Log out
-          </button>
-        </div>
-
-        {/* App version */}
         <p className="text-center text-slate-300 text-[11px] mt-6 mb-2">Lista · v0.1.0</p>
-
       </div>
     </div>
   )
@@ -394,6 +477,15 @@ function LogoutIcon() {
       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
       <polyline points="16 17 21 12 16 7"/>
       <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  )
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 01-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.9.3l-.1.1A2 2 0 014.2 17l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9L4.2 7A2 2 0 017 4.2l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.9-.3l.1-.1A2 2 0 0119.8 7l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1h.1a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/>
     </svg>
   )
 }

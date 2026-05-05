@@ -1,4 +1,5 @@
 import ProfileAvatar from '../components/ProfileAvatar'
+import ScreenHeader from '../components/ScreenHeader'
 import { CATEGORY_COLORS, formatDueDate, getDateGroup } from '../lib/utils'
 
 export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate }) {
@@ -12,13 +13,13 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
+      <ScreenHeader>
         <div>
           <h1 className="text-slate-900 font-bold text-2xl">Reminders</h1>
           <p className="text-slate-400 text-xs mt-0.5">{upcoming.length} upcoming</p>
         </div>
         <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
-      </header>
+      </ScreenHeader>
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4 space-y-6">
         {upcoming.length === 0 ? (

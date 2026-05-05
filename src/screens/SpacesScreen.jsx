@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { parseTask } from '../lib/ai'
 import ProfileAvatar from '../components/ProfileAvatar'
+import ScreenHeader from '../components/ScreenHeader'
 import { CATEGORY_COLORS, formatDueDate } from '../lib/utils'
 
 export default function SpacesScreen({ session, displayName, onNavigate }) {
@@ -73,7 +74,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
+      <ScreenHeader>
         <div>
           <h1 className="text-slate-900 font-bold text-2xl">Spaces</h1>
           <p className="text-slate-400 text-xs mt-0.5">Collaborate with your team</p>
@@ -91,7 +92,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
           </button>
           <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
         </div>
-      </header>
+      </ScreenHeader>
 
       {showCreate && (
         <CreateSpaceModal
@@ -233,7 +234,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="px-5 pt-6 pb-3">
+      <ScreenHeader className="px-5 pt-6 pb-3">
         <button onClick={onBack} className="text-accent-light text-sm mb-3 flex items-center gap-1">
           <span>←</span> All Spaces
         </button>
@@ -258,7 +259,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
           </div>
           <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
         </div>
-      </header>
+      </ScreenHeader>
 
       {/* Filter pill */}
       <div className="px-5 pb-3">
