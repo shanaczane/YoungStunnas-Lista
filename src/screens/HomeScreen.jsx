@@ -84,7 +84,9 @@ export default function HomeScreen({
 
   async function handleConfirm() {
     if (!parseCard) return
-    const encodedNotes = parseCard.checklistItems ? encodeChecklist(parseCard.checklistItems) : undefined
+    const encodedNotes = parseCard.checklistItems
+      ? encodeChecklist(parseCard.checklistItems)
+      : (parseCard.notes || undefined)
     const { data, error } = await supabase.from('tasks').insert({
       user_id: session.user.id,
       content: parseCard.raw,
@@ -330,13 +332,22 @@ export default function HomeScreen({
                   </div>
                 </div>
               ) : (
-                <input
-                  type="text"
-                  value={parseCard.task}
-                  onChange={e => handleEditField('task', e.target.value)}
-                  className="w-full bg-transparent text-slate-900 text-xl font-bold outline-none border-b-2 border-slate-200 focus:border-accent-deep pb-1.5 transition-colors placeholder:text-slate-300"
-                  placeholder="Task name"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={parseCard.task}
+                    onChange={e => handleEditField('task', e.target.value)}
+                    className="w-full bg-transparent text-slate-900 text-xl font-bold outline-none border-b-2 border-slate-200 focus:border-accent-deep pb-1.5 transition-colors placeholder:text-slate-300"
+                    placeholder="Task name"
+                  />
+                  <textarea
+                    value={parseCard.notes || ''}
+                    onChange={e => handleEditField('notes', e.target.value)}
+                    placeholder="Add a note..."
+                    rows={3}
+                    className="w-full bg-slate-50 border border-black/10 rounded-xl px-4 py-3 text-slate-700 text-sm outline-none resize-none placeholder:text-slate-300 focus:border-accent-deep transition-colors"
+                  />
+                </div>
               )}
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-2">Category</p>
