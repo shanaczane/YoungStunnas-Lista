@@ -19,6 +19,9 @@ export function encodeChecklist(items) {
  * Conservative — requires a colon separator OR 3+ commas to avoid false positives.
  */
 export function detectChecklist(input) {
+  // Strip surrounding quotes from the whole input
+  input = input.replace(/^["']|["']$/g, '').trim()
+
   const commas = (input.match(/,/g) || []).length
   const hasColon = input.includes(':')
 
@@ -48,9 +51,11 @@ export function detectChecklist(input) {
     }
   }
 
+  title = title.replace(/^["']|["']$/g, '').trim()
+
   const items = itemsText
     .split(/,|\s+and\s+/i)
-    .map(s => s.trim())
+    .map(s => s.replace(/^["']|["']$/g, '').trim())
     .filter(s => s.length > 0 && s.length < 100)
 
   if (items.length < 2) return null

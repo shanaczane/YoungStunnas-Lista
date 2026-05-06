@@ -29,6 +29,7 @@ export default function HomeScreen({
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
   const inputRef = useRef(null)
+  const itemRefs = useRef([])
 
   const today = new Date()
   const tomorrow = new Date(today)
@@ -56,7 +57,15 @@ export default function HomeScreen({
 
     const checklist = detectChecklist(trimmed)
     if (checklist) {
-      setParseCard({ raw: trimmed, task: checklist.title, due_date: null, category: 'Personal', assignee: null, checklistItems: checklist.items })
+      setParseCard({
+        raw: trimmed,
+        task: suggestListTitle(checklist.title, checklist.items),
+        checklistTitle: checklist.title,
+        due_date: null,
+        category: 'Personal',
+        assignee: null,
+        checklistItems: checklist.items,
+      })
       return
     }
 
@@ -248,43 +257,78 @@ export default function HomeScreen({
 
             <div className="space-y-2.5 mb-3">
               {parseCard.checklistItems ? (
-                <div className="bg-slate-50 border border-black/10 rounded-xl px-4 py-3">
-                  <input
-                    type="text"
-                    value={parseCard.task}
-                    onChange={e => handleEditField('task', e.target.value)}
-                    className="w-full bg-transparent text-slate-900 text-base font-bold outline-none mb-3 placeholder:text-slate-300"
-                    placeholder="List title"
-                  />
-                  <div className="space-y-2.5">
-                    {parseCard.checklistItems.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 group">
-                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
-                        <input
-                          type="text"
-                          value={item.text}
-                          onChange={e => {
-                            const items = parseCard.checklistItems.map((it, j) => j === i ? { ...it, text: e.target.value } : it)
-                            handleEditField('checklistItems', items)
-                          }}
-                          placeholder={`Item ${i + 1}`}
-                          className="flex-1 bg-transparent text-slate-700 text-sm outline-none placeholder:text-slate-300"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleEditField('checklistItems', parseCard.checklistItems.filter((_, j) => j !== i))}
-                          className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        >✕</button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => handleEditField('checklistItems', [...parseCard.checklistItems, { text: '', done: false }])}
-                      className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors mt-1"
-                    >
-                      <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
-                      <span className="text-sm">Add item</span>
-                    </button>
+                <div className="space-y-2">
+                  {/* AI-suggested overall task name */}
+                  <div>
+                    <p className="text-slate-400 text-[10px] font-semibold mb-1">Overall Title</p>
+                    <input
+                      type="text"
+                      value={parseCard.task}
+                      onChange={e => handleEditField('task', e.target.value)}
+                      className="w-full bg-slate-50 text-slate-800 text-sm font-semibold rounded-xl px-3 py-2 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300"
+                      placeholder="e.g. Grocery List"
+                    />
+                  </div>
+                  {/* Note card */}
+                  <div className="bg-slate-50 border border-black/10 rounded-xl px-4 py-3">
+                    <input
+                      type="text"
+                      value={parseCard.checklistTitle ?? parseCard.task}
+                      onChange={e => handleEditField('checklistTitle', e.target.value)}
+                      className="w-full bg-transparent text-slate-900 text-base font-bold outline-none mb-3 placeholder:text-slate-300"
+                      placeholder="List title"
+                    />
+                    <div className="space-y-2.5">
+                      {parseCard.checklistItems.map((item, i) => (
+                        <div key={i} className="flex items-center gap-3 group">
+                          <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                          <input
+                            ref={el => { itemRefs.current[i] = el }}
+                            type="text"
+                            value={item.text}
+                            onChange={e => {
+                              const items = parseCard.checklistItems.map((it, j) => j === i ? { ...it, text: e.target.value } : it)
+                              handleEditField('checklistItems', items)
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                const items = [...parseCard.checklistItems]
+                                items.splice(i + 1, 0, { text: '', done: false })
+                                handleEditField('checklistItems', items)
+                                setTimeout(() => itemRefs.current[i + 1]?.focus(), 0)
+                              } else if (e.key === 'Backspace' && item.text === '') {
+                                e.preventDefault()
+                                if (parseCard.checklistItems.length > 1) {
+                                  const items = parseCard.checklistItems.filter((_, j) => j !== i)
+                                  handleEditField('checklistItems', items)
+                                  setTimeout(() => itemRefs.current[Math.max(0, i - 1)]?.focus(), 0)
+                                }
+                              }
+                            }}
+                            placeholder={`Item ${i + 1}`}
+                            className="flex-1 bg-transparent text-slate-700 text-sm outline-none placeholder:text-slate-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleEditField('checklistItems', parseCard.checklistItems.filter((_, j) => j !== i))}
+                            className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          >✕</button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = parseCard.checklistItems.length
+                          handleEditField('checklistItems', [...parseCard.checklistItems, { text: '', done: false }])
+                          setTimeout(() => itemRefs.current[next]?.focus(), 0)
+                        }}
+                        className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors mt-1"
+                      >
+                        <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
+                        <span className="text-sm">Add item</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -413,6 +457,19 @@ export default function HomeScreen({
       </div>
     </div>
   )
+}
+
+function suggestListTitle(title, items) {
+  const combined = (title + ' ' + items.map(i => i.text).join(' ')).toLowerCase()
+  if (/grocery|grocer|garlic|onion|tomato|vegetable|fruit|market|buy|shop|supermarket/.test(combined)) return 'Grocery List'
+  if (/pencil|eraser|notebook|pen|highlighter|ballpen|supplies/.test(combined)) return 'School Supplies'
+  if (/pack|luggage|travel|trip|suitcase/.test(combined)) return 'Packing List'
+  if (/medicine|pill|drug|vitamin|tablet/.test(combined)) return 'Medicine List'
+  if (/book|read|library|novel/.test(combined)) return 'Reading List'
+  if (/todo|task|things to do|checklist/.test(combined)) return 'To-Do List'
+  if (/ingredi|recipe|cook|bake/.test(combined)) return 'Ingredients'
+  const t = title.trim()
+  return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
 function EditableRow({ label, value, onChange }) {
