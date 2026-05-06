@@ -1,46 +1,105 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import mainLogo from '../mascots/main-logo.png'
 
 export default function AuthScreen({ defaultTab = 'login' }) {
+  const [view, setView] = useState('landing')
   const [tab, setTab] = useState(defaultTab)
 
+  if (view === 'landing') {
+    return <LandingScreen
+      onGetStarted={() => { setTab('signup'); setView('auth') }}
+      onLogin={() => { setTab('login'); setView('auth') }}
+    />
+  }
+
   return (
-    <div className="min-h-screen bg-app-bg flex flex-col items-center justify-center px-6 py-12">
-      <div className="mb-6 text-center">
-        <img src="/mascots/auth.png" alt="Ollie" className="w-28 h-28 object-contain mx-auto mb-3" />
-        <h1 className="text-4xl font-bold text-accent-deep tracking-tight">Lista</h1>
-        <p className="text-slate-400 text-sm mt-2">Just type. We handle the rest.</p>
+    <div className="min-h-screen bg-app-bg flex items-center justify-center px-6 py-10">
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-black/8 px-7 py-8">
+        <div className="flex flex-col items-center text-center mb-7">
+          <img src={mainLogo} alt="Lista" className="w-14 h-14 object-contain mb-3" />
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+            {tab === 'login' ? 'Sign in' : 'Sign up'}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            {tab === 'login' ? 'Welcome back to Lista' : 'Create your Lista account'}
+          </p>
+        </div>
+
+        {tab === 'login'
+          ? <LoginForm />
+          : <SignUpForm onSuccess={() => setTab('login')} />
+        }
+
+        <Divider />
+        <GoogleButton />
+
+        <p className="text-center text-sm text-slate-400 mt-5">
+          {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <button
+            onClick={() => setTab(tab === 'login' ? 'signup' : 'login')}
+            className="text-accent-deep font-semibold hover:underline"
+          >
+            {tab === 'login' ? 'Sign up' : 'Sign in'}
+          </button>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function LandingScreen({ onGetStarted, onLogin }) {
+  return (
+    <div className="min-h-screen bg-[#0E1B3D] flex flex-col items-center justify-between px-6 py-14">
+      <div className="flex flex-col items-center text-center gap-2">
+        <img src={mainLogo} alt="Lista" className="w-20 h-20 object-contain mb-1" />
+        <h1 className="text-4xl font-bold text-white tracking-tight">Lista</h1>
+        <p className="text-[#7B93C8] text-xs tracking-[0.2em] uppercase">Just type. We handle the rest.</p>
       </div>
 
-      <div className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl border border-black/8">
-        <div className="flex border-b border-black/8">
-          {['login', 'signup'].map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 py-4 text-sm font-semibold transition-colors ${
-                tab === t
-                  ? 'text-accent-deep border-b-2 border-accent-deep -mb-px'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {t === 'login' ? 'Log In' : 'Sign Up'}
-            </button>
-          ))}
+      <div className="w-full max-w-sm flex flex-col gap-6 my-8">
+        <div className="bg-[#162850] rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold text-[#7B93C8] uppercase tracking-wider">You</span>
+            <span className="text-white text-sm">submit thesis draft by friday</span>
+          </div>
+          <div className="flex justify-center">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M8 13l-4-4M8 13l4-4" stroke="#7B93C8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="bg-white rounded-xl px-4 py-3 flex items-center justify-between">
+            <span className="text-slate-800 text-sm font-medium">Submit thesis draft</span>
+            <div className="flex items-center gap-1.5">
+              <span className="bg-accent-deep text-white text-[10px] font-bold px-1.5 py-0.5 rounded">SCH</span>
+              <span className="text-slate-400 text-xs">FRI · 11:59 PM</span>
+            </div>
+          </div>
         </div>
 
-        <div className="p-6">
-          {tab === 'login' ? <LoginForm /> : <SignUpForm onSuccess={() => setTab('login')} />}
-          <Divider />
-          <GoogleButton />
-          {tab === 'login' && (
-            <p className="text-center mt-4">
-              <button className="text-accent-deep text-xs hover:underline">
-                Forgot password?
-              </button>
-            </p>
-          )}
+        <div className="flex flex-col gap-3">
+          {[['01', 'Type naturally'], ['02', 'AI organizes'], ['03', 'Never miss a deadline']].map(([num, label]) => (
+            <div key={num} className="flex items-center gap-3">
+              <span className="text-[#7B93C8] text-xs font-mono w-6">{num}</span>
+              <span className="text-white text-sm">{label}</span>
+            </div>
+          ))}
         </div>
+      </div>
+
+      <div className="w-full max-w-sm flex flex-col gap-3">
+        <button
+          onClick={onGetStarted}
+          className="w-full bg-white text-[#0E1B3D] py-4 rounded-2xl font-semibold text-sm"
+        >
+          Get started
+        </button>
+        <button
+          onClick={onLogin}
+          className="w-full text-[#7B93C8] py-2 text-sm"
+        >
+          I already have an account
+        </button>
       </div>
     </div>
   )
@@ -49,6 +108,8 @@ export default function AuthScreen({ defaultTab = 'login' }) {
 function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -63,10 +124,32 @@ function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="Email" type="email" value={email} onChange={setEmail} />
-      <Field label="Password" type="password" value={password} onChange={setPassword} />
+      <Field label="Email" required type="email" value={email} onChange={setEmail} placeholder="Enter your email" />
+      <Field
+        label="Password" required
+        type={showPassword ? 'text' : 'password'}
+        value={password} onChange={setPassword}
+        placeholder="Enter your password"
+        suffix={
+          <button type="button" onClick={() => setShowPassword(v => !v)} className="text-slate-400 hover:text-slate-600">
+            {showPassword ? <EyeOff /> : <Eye />}
+          </button>
+        }
+      />
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300 accent-accent-deep"
+          />
+          <span className="text-xs text-slate-500">Remember me</span>
+        </label>
+        <button type="button" className="text-xs text-accent-deep hover:underline">
+          Forgot password?
+        </button>
+      </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
-      <SubmitButton loading={loading} label="Log In" loadingLabel="Signing in…" />
+      <SubmitButton loading={loading} label="Sign in" loadingLabel="Signing in…" />
     </form>
   )
 }
@@ -76,6 +159,8 @@ function SignUpForm({ onSuccess }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [created, setCreated] = useState(false)
@@ -83,9 +168,9 @@ function SignUpForm({ onSuccess }) {
   async function handleSubmit(e) {
     e.preventDefault()
     const errs = {}
-    if (!displayName.trim()) errs.displayName = 'Display name is required'
-    if (!email) errs.email = 'Email is required'
-    if (password.length < 6) errs.password = 'Password must be at least 6 characters'
+    if (!displayName.trim()) errs.displayName = 'Required'
+    if (!email) errs.email = 'Required'
+    if (password.length < 6) errs.password = 'Min 6 characters'
     if (password !== confirm) errs.confirm = 'Passwords do not match'
     if (Object.keys(errs).length) { setErrors(errs); return }
 
@@ -111,7 +196,7 @@ function SignUpForm({ onSuccess }) {
           onClick={onSuccess}
           className="w-full bg-accent-deep hover:bg-accent-mid text-white py-3 rounded-xl font-semibold text-sm transition-colors mt-2"
         >
-          Go to Log In
+          Go to Sign in
         </button>
       </div>
     )
@@ -119,36 +204,57 @@ function SignUpForm({ onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="Display Name" type="text" value={displayName}
-        onChange={v => { setDisplayName(v); setErrors(e => ({ ...e, displayName: '' })) }}
+      <Field label="Display name" required type="text" placeholder="Your name"
+        value={displayName} onChange={v => { setDisplayName(v); setErrors(e => ({ ...e, displayName: '' })) }}
         error={errors.displayName} />
-      <Field label="Email" type="email" value={email}
-        onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: '' })) }}
+      <Field label="Email" required type="email" placeholder="you@example.com"
+        value={email} onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: '' })) }}
         error={errors.email} />
-      <Field label="Password" type="password" value={password}
-        onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
-        error={errors.password} />
-      <Field label="Confirm Password" type="password" value={confirm}
-        onChange={v => { setConfirm(v); setErrors(e => ({ ...e, confirm: '' })) }}
-        error={errors.confirm} />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Password" required placeholder="••••••••"
+          type={showPassword ? 'text' : 'password'}
+          value={password} onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
+          error={errors.password}
+          suffix={
+            <button type="button" onClick={() => setShowPassword(v => !v)} className="text-slate-400 hover:text-slate-600">
+              {showPassword ? <EyeOff /> : <Eye />}
+            </button>
+          }
+        />
+        <Field label="Confirm password" required placeholder="••••••••"
+          type={showConfirm ? 'text' : 'password'}
+          value={confirm} onChange={v => { setConfirm(v); setErrors(e => ({ ...e, confirm: '' })) }}
+          error={errors.confirm}
+          suffix={
+            <button type="button" onClick={() => setShowConfirm(v => !v)} className="text-slate-400 hover:text-slate-600">
+              {showConfirm ? <EyeOff /> : <Eye />}
+            </button>
+          }
+        />
+      </div>
       {errors.general && <p className="text-red-500 text-xs">{errors.general}</p>}
-      <SubmitButton loading={loading} label="Create Account" loadingLabel="Creating account…" />
+      <SubmitButton loading={loading} label="Sign up" loadingLabel="Creating account…" />
     </form>
   )
 }
 
-function Field({ label, type, value, onChange, error }) {
+function Field({ label, required, type = 'text', value, onChange, error, placeholder, suffix }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className={`w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none
-          border transition-colors placeholder:text-slate-300
-          ${error ? 'border-red-400' : 'border-black/10 focus:border-accent-deep'}`}
-      />
+      <label className="block text-xs font-medium text-slate-600 mb-1">
+        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
+      <div className={`flex items-center bg-slate-50 rounded-xl border transition-colors px-3
+        ${error ? 'border-red-400' : 'border-black/10 focus-within:border-accent-deep'}`}>
+        <input
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={e => onChange(e.target.value)}
+          className="flex-1 bg-transparent text-slate-800 text-sm py-2.5 outline-none placeholder:text-slate-300 min-w-0"
+        />
+        {suffix && <span className="ml-2 flex-shrink-0">{suffix}</span>}
+      </div>
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   )
@@ -194,6 +300,25 @@ function GoogleButton() {
       <GoogleIcon />
       Continue with Google
     </button>
+  )
+}
+
+function Eye() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  )
+}
+
+function EyeOff() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
   )
 }
 
