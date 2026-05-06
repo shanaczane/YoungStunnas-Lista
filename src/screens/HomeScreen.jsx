@@ -200,7 +200,7 @@ export default function HomeScreen({
       </div>
 
       {/* Bottom fixed area: parse card + chat input stacked */}
-      <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
+      <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
           <div className="bg-white rounded-2xl p-4 card-elevated-lg animate-slide-up">
             <div className="flex items-center justify-between mb-3">
@@ -283,7 +283,7 @@ export default function HomeScreen({
           <button
             onClick={handleSend}
             disabled={!input.trim() || parsing}
-            className="w-8 h-8 rounded-full bg-accent-deep flex items-center justify-center transition-colors disabled:opacity-40 active:bg-accent-mid flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-accent-deep text-white flex items-center justify-center transition-colors disabled:opacity-40 active:bg-accent-mid shrink-0"
           >
             {parsing ? (
               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

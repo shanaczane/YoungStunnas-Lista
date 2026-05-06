@@ -68,11 +68,8 @@ function HomeIcon() {
 function TasksIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="6" height="6" rx="1"/>
-      <rect x="3" y="13" width="6" height="6" rx="1"/>
-      <line x1="13" y1="7" x2="21" y2="7"/>
-      <line x1="13" y1="15" x2="21" y2="15"/>
-      <line x1="13" y1="19" x2="21" y2="19"/>
+      <polyline points="9 11 12 14 22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
     </svg>
   )
 }
@@ -80,10 +77,10 @@ function TasksIcon() {
 function SpacesIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="7" r="3"/>
-      <circle cx="17" cy="10" r="3"/>
-      <path d="M1 21v-1a7 7 0 0 1 12-4.9"/>
-      <path d="M17 21v-1a4 4 0 0 0-4-4"/>
+      <rect x="3" y="3" width="8" height="8" rx="1"/>
+      <rect x="13" y="3" width="8" height="8" rx="1"/>
+      <rect x="3" y="13" width="8" height="8" rx="1"/>
+      <rect x="13" y="13" width="8" height="8" rx="1"/>
     </svg>
   )
 }
