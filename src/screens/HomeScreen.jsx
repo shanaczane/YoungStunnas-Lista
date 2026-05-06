@@ -4,7 +4,7 @@ import AppLogo from '../components/AppLogo'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
-import { parseTask, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput } from '../lib/ai'
+import { parseTask, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput, parseImageList } from '../lib/ai'
 import { formatDueDate, getGreeting } from '../lib/utils'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
 
@@ -21,6 +21,8 @@ export default function HomeScreen({
   onCategoriesChanged,
   focusChat,
   onFocusChatConsumed,
+  pendingImage,
+  onPendingImageConsumed,
 }) {
   const [input, setInput] = useState('')
   const [parsing, setParsing] = useState(false)
@@ -70,6 +72,36 @@ export default function HomeScreen({
       onFocusChatConsumed()
     }
   }, [focusChat, onFocusChatConsumed])
+
+  useEffect(() => {
+    if (!pendingImage) return
+    onPendingImageConsumed()
+    setParseError('')
+    setParsing(true)
+    setParseCard(null)
+    parseImageList(pendingImage).then(text => {
+      if (!text) {
+        setParseError('Could not read the image — try again with better lighting.')
+        setParsing(false)
+        return
+      }
+      const checklist = detectChecklist(text)
+      if (checklist) {
+        setParseCard({
+          raw: text,
+          task: suggestListTitle(checklist.title, checklist.items),
+          checklistTitle: checklist.title,
+          due_date: null,
+          category: 'Personal',
+          assignee: null,
+          checklistItems: checklist.items,
+        })
+      } else {
+        setParseCard({ raw: text, task: text, due_date: null, category: 'Personal', assignee: null, notes: text })
+      }
+      setParsing(false)
+    })
+  }, [pendingImage])
 
   async function handleSend() {
     const trimmed = input.trim()
