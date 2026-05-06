@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji, createCategory } from '../lib/categories'
 import { isChecklist, getChecklistItems, encodeChecklist } from '../lib/ai'
 
@@ -22,6 +22,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   const [saving, setSaving] = useState(false)
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
+  const itemRefs = useRef([])
 
   const isDirty =
     taskName !== task.task_name ||
@@ -195,9 +196,33 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                       )}
                     </button>
                     <input
+                      ref={el => { itemRefs.current[i] = el }}
                       type="text"
                       value={item.text}
                       onChange={e => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, text: e.target.value } : it))}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (!item.text.trim()) return
+                          setChecklistItems(prev => {
+                            const next = [...prev]
+                            next.splice(i + 1, 0, { text: '', done: false })
+                            return next
+                          })
+                          setTimeout(() => itemRefs.current[i + 1]?.focus(), 0)
+                        } else if (e.key === 'Backspace' && item.text === '') {
+                          e.preventDefault()
+                          if (checklistItems.length > 1) {
+                            setChecklistItems(prev => prev.filter((_, j) => j !== i))
+                            setTimeout(() => itemRefs.current[Math.max(0, i - 1)]?.focus(), 0)
+                          }
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!item.text.trim() && checklistItems.length > 1) {
+                          setChecklistItems(prev => prev.filter((_, j) => j !== i))
+                        }
+                      }}
                       placeholder={`Item ${i + 1}`}
                       className={`flex-1 bg-transparent text-sm outline-none placeholder:text-slate-300 ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}`}
                     />
@@ -210,7 +235,11 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                 ))}
                 <button
                   type="button"
-                  onClick={() => setChecklistItems(prev => [...prev, { text: '', done: false }])}
+                  onClick={() => {
+                    const next = checklistItems.length
+                    setChecklistItems(prev => [...prev, { text: '', done: false }])
+                    setTimeout(() => itemRefs.current[next]?.focus(), 0)
+                  }}
                   className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors pt-1"
                 >
                   <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
