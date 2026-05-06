@@ -63,6 +63,49 @@ export function detectChecklist(input) {
   return { title, items: items.map(text => ({ text, done: false })) }
 }
 
+// ─── Clean raw input for note field ──────────────────────────────────────────
+export function cleanInput(input) {
+  const ABBREVS = {
+    'mon': 'Monday', 'tue': 'Tuesday', 'tues': 'Tuesday',
+    'wed': 'Wednesday', 'thu': 'Thursday', 'thurs': 'Thursday',
+    'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday',
+  }
+  let result = input.trim()
+
+  // Expand day abbreviations (preserve original casing pattern)
+  for (const [abbrev, full] of Object.entries(ABBREVS)) {
+    result = result.replace(
+      new RegExp(`\\b${abbrev}\\b`, 'gi'),
+      m => m[0] === m[0].toUpperCase() ? full : full.toLowerCase()
+    )
+  }
+
+  // Resolve "this week" day → actual date string
+  const now = new Date()
+  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+  result = result.replace(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+this\s+week\b/gi, (_, day) => {
+    const idx = days.indexOf(day.toLowerCase())
+    const diff = (idx - now.getDay() + 7) % 7 || 7
+    const target = new Date(now)
+    target.setDate(now.getDate() + diff)
+    return target.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  })
+
+  // Resolve "next [day]"
+  result = result.replace(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, (_, day) => {
+    const idx = days.indexOf(day.toLowerCase())
+    const diff = (idx - now.getDay() + 7) % 7 || 7
+    const target = new Date(now)
+    target.setDate(now.getDate() + diff)
+    return target.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  })
+
+  // Capitalize first letter
+  result = result.charAt(0).toUpperCase() + result.slice(1)
+
+  return result.replace(/\s+/g, ' ').trim()
+}
+
 // ─── Ollama / parse ───────────────────────────────────────────────────────────
 const OLLAMA_URL = import.meta.env.VITE_OLLAMA_URL || 'http://localhost:11434'
 const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'llama3.2'

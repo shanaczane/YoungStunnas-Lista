@@ -4,7 +4,7 @@ import AppLogo from '../components/AppLogo'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
-import { parseTask, detectChecklist, encodeChecklist, isChecklist, getChecklistItems } from '../lib/ai'
+import { parseTask, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput } from '../lib/ai'
 import { formatDueDate, getGreeting } from '../lib/utils'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
 
@@ -73,10 +73,10 @@ export default function HomeScreen({
     setParseCard(null)
     try {
       const parsed = await parseTask(trimmed)
-      setParseCard({ raw: trimmed, ...parsed })
+      setParseCard({ raw: trimmed, ...parsed, notes: cleanInput(trimmed) })
     } catch {
       setParseError('Could not parse — tap to enter manually.')
-      setParseCard({ raw: trimmed, task: trimmed, due_date: null, category: 'Personal', assignee: null })
+      setParseCard({ raw: trimmed, task: trimmed, due_date: null, category: 'Personal', assignee: null, notes: cleanInput(trimmed) })
     } finally {
       setParsing(false)
     }
