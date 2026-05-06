@@ -28,6 +28,7 @@ export default function HomeScreen({
   const [parseError, setParseError] = useState('')
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
+  const [sortMode, setSortMode] = useState('recent')
   const inputRef = useRef(null)
   const itemRefs = useRef([])
 
@@ -41,7 +42,26 @@ export default function HomeScreen({
     return d <= new Date(tomorrow.toDateString() + ' 23:59:59')
   })
 
-  const recent = tasks.slice(0, 5)
+  const SORT_MODES = ['recent', 'nearest', 'furthest']
+  const SORT_LABELS = { recent: 'Recent', nearest: 'Nearest Due', furthest: 'Furthest Due' }
+
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (sortMode === 'nearest') {
+      if (!a.due_date && !b.due_date) return 0
+      if (!a.due_date) return 1
+      if (!b.due_date) return -1
+      return new Date(a.due_date) - new Date(b.due_date)
+    }
+    if (sortMode === 'furthest') {
+      if (!a.due_date && !b.due_date) return 0
+      if (!a.due_date) return 1
+      if (!b.due_date) return -1
+      return new Date(b.due_date) - new Date(a.due_date)
+    }
+    return 0 // 'recent' keeps original order (already sorted by created_at desc)
+  })
+
+  const recent = sortedTasks.slice(0, 5)
 
   useEffect(() => {
     if (focusChat) {
@@ -198,11 +218,22 @@ export default function HomeScreen({
             <section className="px-5 pt-2">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Tasks</p>
-                {tasks.length > 5 && (
-                  <button onClick={() => onNavigate('tasks')} className="text-accent-deep text-xs font-semibold">
-                    View all →
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSortMode(m => SORT_MODES[(SORT_MODES.indexOf(m) + 1) % SORT_MODES.length])}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-accent-deep bg-accent-pale px-2.5 py-1 rounded-full"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18M7 12h10M11 18h2"/>
+                    </svg>
+                    {SORT_LABELS[sortMode]}
                   </button>
-                )}
+                  {tasks.length > 5 && (
+                    <button onClick={() => onNavigate('tasks')} className="text-accent-deep text-xs font-semibold">
+                      View all →
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="space-y-2.5">
                 {recent.map(task => (
