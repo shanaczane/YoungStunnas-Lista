@@ -18,7 +18,7 @@ const TIME_CONTEXT = {
 }
 
 export async function parseTask(input) {
-  const today = new Date()toLocalISO.split('T')[0]
+  const today = toLocalISO(new Date()).split('T')[0]
 
   const prompt = `Today is ${today}. Parse this task input and return ONLY a valid JSON object with exactly these fields:
 {
