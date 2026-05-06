@@ -124,14 +124,12 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
             />
           </div>
 
-          <div className="mb-4">
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">
-              {checklistItems ? 'Checklist' : 'Notes'}
-            </label>
-            {checklistItems ? (
-              <div className="bg-slate-50 rounded-xl px-3 py-2.5 border border-black/10 space-y-2">
+          {checklistItems ? (
+            <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
+              <p className="text-slate-900 font-bold text-base mb-3">{taskName}</p>
+              <div className="space-y-2.5">
                 {checklistItems.map((item, i) => (
-                  <div key={i} className="flex items-center gap-2.5 group">
+                  <div key={i} className="flex items-center gap-3 group">
                     <button
                       type="button"
                       onClick={() => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, done: !it.done } : it))}
@@ -149,24 +147,29 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                       type="text"
                       value={item.text}
                       onChange={e => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, text: e.target.value } : it))}
-                      className={`flex-1 bg-transparent text-sm outline-none ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}`}
+                      placeholder={`Item ${i + 1}`}
+                      className={`flex-1 bg-transparent text-sm outline-none placeholder:text-slate-300 ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}`}
                     />
                     <button
                       type="button"
                       onClick={() => setChecklistItems(prev => prev.filter((_, j) => j !== i))}
-                      className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                     >✕</button>
                   </div>
                 ))}
                 <button
                   type="button"
                   onClick={() => setChecklistItems(prev => [...prev, { text: '', done: false }])}
-                  className="text-accent-deep text-xs font-semibold flex items-center gap-1 pt-1"
+                  className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors pt-1"
                 >
-                  <span className="text-base leading-none">+</span> Add item
+                  <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
+                  <span className="text-sm">Add item</span>
                 </button>
               </div>
-            ) : (
+            </div>
+          ) : (
+            <div className="mb-4">
+              <label className="text-slate-400 text-xs font-medium block mb-1.5">Notes</label>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -174,8 +177,8 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                 rows={3}
                 className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
               />
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-black/10">
             <div className="flex items-center justify-between">
