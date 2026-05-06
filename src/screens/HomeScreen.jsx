@@ -330,10 +330,12 @@ export default function HomeScreen({
                   </div>
                 </div>
               ) : (
-                <EditableRow
-                  label="Task"
+                <input
+                  type="text"
                   value={parseCard.task}
-                  onChange={v => handleEditField('task', v)}
+                  onChange={e => handleEditField('task', e.target.value)}
+                  className="w-full bg-transparent text-slate-900 text-xl font-bold outline-none border-b-2 border-slate-200 focus:border-accent-deep pb-1.5 transition-colors placeholder:text-slate-300"
+                  placeholder="Task name"
                 />
               )}
               <div>
