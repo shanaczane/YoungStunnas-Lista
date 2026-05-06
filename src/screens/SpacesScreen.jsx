@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase'
 import { parseTask } from '../lib/ai'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
-import { CATEGORY_COLORS, formatDueDate } from '../lib/utils'
+import { formatDueDate } from '../lib/utils'
+import { getCategoryColor } from '../lib/categories'
 import mascot from '../mascots/home-mascot.png'
 
 export default function SpacesScreen({ session, displayName, onNavigate }) {
@@ -309,7 +310,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
               {parseCard.due_date && <span>📅 {new Date(parseCard.due_date).toLocaleDateString()}</span>}
               <span
                 className="px-2 py-0.5 rounded text-[10px] font-semibold"
-                style={{ backgroundColor: CATEGORY_COLORS[parseCard.category]?.bg, color: CATEGORY_COLORS[parseCard.category]?.text }}
+                style={{ backgroundColor: getCategoryColor(parseCard.category).bg, color: getCategoryColor(parseCard.category).text }}
               >
                 {parseCard.category}
               </span>
@@ -364,7 +365,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
 }
 
 function SpaceTaskCard({ task }) {
-  const colors = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.Work
+  const colors = getCategoryColor(task.category)
   return (
     <div className="bg-card-bg rounded-xl flex items-center border border-white/10 overflow-hidden">
       <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: colors.border }} />

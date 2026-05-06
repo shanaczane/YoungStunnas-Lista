@@ -1,6 +1,7 @@
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
-import { CATEGORY_COLORS, formatDueDate, getDateGroup } from '../lib/utils'
+import { formatDueDate, getDateGroup } from '../lib/utils'
+import { getCategoryColor } from '../lib/categories'
 import mascot from '../mascots/home-mascot.png'
 
 export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate }) {
@@ -58,7 +59,7 @@ function ReminderSection({ title, titleColor, tasks, onOpenTask }) {
 }
 
 function ReminderRow({ task, onOpenTask }) {
-  const colors = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.Personal
+  const colors = getCategoryColor(task.category)
   const isOverdue = getDateGroup(task.due_date) === 'Overdue'
 
   return (
@@ -66,14 +67,14 @@ function ReminderRow({ task, onOpenTask }) {
       onClick={() => onOpenTask(task.id)}
       className="w-full bg-white rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] overflow-hidden text-left"
     >
-      <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: isOverdue ? '#ef4444' : colors.border }} />
+      <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: isOverdue ? '#ef4444' : colors.border }} />
       <div className="flex-1 py-3.5 px-3 min-w-0">
         <p className="text-slate-800 text-sm font-semibold leading-tight truncate">{task.task_name}</p>
         <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
           {formatDueDate(task.due_date)}
         </p>
       </div>
-      <div className="pr-3 flex items-center gap-2 flex-shrink-0">
+      <div className="pr-3 flex items-center gap-2 shrink-0">
         <span
           className="text-[10px] font-bold px-2.5 py-1 rounded-full"
           style={{ backgroundColor: colors.bg, color: colors.text }}
