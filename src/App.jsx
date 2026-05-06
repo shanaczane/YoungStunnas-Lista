@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
-import AuthScreen from './screens/AuthScreen'
+import AuthScreen from './screens/authentication/AuthScreen'
 import HomeScreen from './screens/HomeScreen'
 import TasksScreen from './screens/TasksScreen'
 import SpacesScreen from './screens/SpacesScreen'
