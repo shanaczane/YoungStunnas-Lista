@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
-import AuthScreen from './screens/AuthScreen'
+import AuthScreen from './screens/authentication/AuthScreen'
 import HomeScreen from './screens/HomeScreen'
 import TasksScreen from './screens/TasksScreen'
 import SpacesScreen from './screens/SpacesScreen'
@@ -123,6 +123,7 @@ export default function App() {
             onTaskCreated={handleTaskCreated}
             onNavigate={navigateTo}
             onOpenTask={openTask}
+            onCategoriesChanged={() => loadCategories(session.user.id)}
             focusChat={focusChat}
             onFocusChatConsumed={() => setFocusChat(false)}
           />
@@ -173,9 +174,11 @@ export default function App() {
         <TaskDetailModal
           task={selectedTask}
           categories={categories}
+          session={session}
           onClose={closeTask}
           onUpdate={handleTaskUpdated}
           onDelete={handleTaskDeleted}
+          onCategoriesChanged={() => loadCategories(session.user.id)}
         />
       )}
     </div>

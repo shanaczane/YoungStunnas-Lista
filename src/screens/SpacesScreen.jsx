@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase'
 import { parseTask } from '../lib/ai'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
-import { CATEGORY_COLORS, formatDueDate } from '../lib/utils'
+import { formatDueDate } from '../lib/utils'
+import { getCategoryColor } from '../lib/categories'
+import mascot from '../mascots/home-mascot.png'
 
 export default function SpacesScreen({ session, displayName, onNavigate }) {
   const [spaces, setSpaces] = useState([])
@@ -214,7 +216,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
 
   async function handleConfirm() {
     if (!parseCard) return
-    await supabase.from('tasks').insert({
+    const { error } = await supabase.from('tasks').insert({
       user_id: session.user.id,
       space_id: space.id,
       content: parseCard.raw,
@@ -223,6 +225,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
       category: parseCard.category || 'Work',
       assignee: parseCard.assignee || null,
     })
+    if (!error) fetchSpaceTasks()
     setParseCard(null)
     setInput('')
   }
@@ -307,7 +310,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
               {parseCard.due_date && <span>📅 {new Date(parseCard.due_date).toLocaleDateString()}</span>}
               <span
                 className="px-2 py-0.5 rounded text-[10px] font-semibold"
-                style={{ backgroundColor: CATEGORY_COLORS[parseCard.category]?.bg, color: CATEGORY_COLORS[parseCard.category]?.text }}
+                style={{ backgroundColor: getCategoryColor(parseCard.category).bg, color: getCategoryColor(parseCard.category).text }}
               >
                 {parseCard.category}
               </span>
@@ -362,7 +365,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
 }
 
 function SpaceTaskCard({ task }) {
-  const colors = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.Work
+  const colors = getCategoryColor(task.category)
   return (
     <div className="bg-card-bg rounded-xl flex items-center border border-white/10 overflow-hidden">
       <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: colors.border }} />
@@ -425,7 +428,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
 function EmptySpaces({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-      <img src="/mascots/spaces.png" alt="Ollie" className="w-36 h-36 object-contain mb-2" />
+      <img src={mascot} alt="Ollie" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
       <p className="text-slate-500 text-sm mb-1">No spaces yet</p>
       <p className="text-slate-300 text-xs mb-5">Create a space to collaborate with your team</p>
       <button

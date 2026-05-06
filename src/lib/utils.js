@@ -1,17 +1,3 @@
-export const CATEGORY_COLORS = {
-  School:   { bg: '#DBEAFE', border: '#1A56A0', text: '#1A56A0' },
-  Work:     { bg: '#EFF6FF', border: '#2563EB', text: '#2563EB' },
-  Personal: { bg: '#F0F9FF', border: '#3B82F6', text: '#3B82F6' },
-  Errands:  { bg: '#F8FAFC', border: '#64748B', text: '#64748B' },
-  Health:   { bg: '#ECFDF5', border: '#059669', text: '#059669' },
-}
-
-export function getGreeting() {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
-}
 
 export function formatDueDate(iso) {
   if (!iso) return ''

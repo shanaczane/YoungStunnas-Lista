@@ -1,16 +1,45 @@
 @import "tailwindcss";
 
 @theme {
-  --color-app-bg: #F4F6FB;
-  --color-card-bg: #FFFFFF;
-  --color-accent-deep: #1A4FD6;
-  --color-accent-mid: #2563EB;
-  --color-accent-light: #4B7BF5;
-  --color-accent-pale: #EEF3FE;
-  --color-text-primary: #0F172A;
-  --color-text-secondary: rgba(15, 23, 42, 0.7);
-  --color-text-tertiary: rgba(15, 23, 42, 0.4);
-  --color-divider: rgba(0, 0, 0, 0.08);
+  /* Brand / accent — navy-blue scale */
+  --color-accent-deep:    #0A2E5C;
+  --color-accent-mid:     #1A56A0;
+  --color-accent-light:   #3B7DD0;
+  --color-accent-lighter: #6BA3DD;
+  --color-accent-pale:    #A5C5E8;
+  --color-accent-shade:   #1F4F8F;
+
+  /* Text */
+  --color-text-primary:   #0A2240;
+  --color-text-secondary: #3A4F6E;
+  --color-text-tertiary:  #7A8AA1;
+
+  /* Surfaces */
+  --color-app-bg:      #F4F6FB;
+  --color-card-bg:     #FFFFFF;
+  --color-card-footer: #F7F9FD;
+  --color-echo-bubble: #EEF3FB;
+  --color-divider:     rgba(10, 46, 92, 0.10);
+
+  /* Override black → accent-deep so border-black/8 = rgba(10,46,92,0.08) everywhere */
+  --color-black: #0A2E5C;
+
+  /* Override slate to navy-tinted text + surface scale */
+  --color-slate-950: #060F1E;
+  --color-slate-900: #0A2240;
+  --color-slate-800: #0A2240;
+  --color-slate-700: #1B3052;
+  --color-slate-600: #3A4F6E;
+  --color-slate-500: #3A4F6E;
+  --color-slate-400: #7A8AA1;
+  --color-slate-300: #9BADC4;
+  --color-slate-200: #C5D3E0;
+  --color-slate-100: #E8EEF4;
+  --color-slate-50:  #F7F9FD;
+
+  /* Fonts */
+  --font-sans: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', monospace;
 }
 
 * {
@@ -19,10 +48,10 @@
 }
 
 body {
-  background-color: #F8FAFC;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background-color: #F4F6FB;
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
   overscroll-behavior: none;
-  color: #0F172A;
+  color: #0A2240;
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -42,8 +71,8 @@ body {
 .fab { animation: fab-pop 0.25s ease-out forwards; }
 
 .card-elevated {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 0 1px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(10,46,92,0.07), 0 0 1px rgba(10,46,92,0.06);
 }
 .card-elevated-lg {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 0 1px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(10,46,92,0.10), 0 0 1px rgba(10,46,92,0.06);
 }

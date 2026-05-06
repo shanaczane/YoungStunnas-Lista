@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji } from '../lib/categories'
+import { useState, useRef } from 'react'
+import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji, createCategory } from '../lib/categories'
+import { isChecklist, getChecklistItems, getChecklistTitle, encodeChecklist } from '../lib/ai'
 
 const REMINDER_OPTIONS = [
   { label: '15 min before', value: 15 },
@@ -7,21 +8,30 @@ const REMINDER_OPTIONS = [
   { label: '1 day before', value: 1440 },
 ]
 
-export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, categories = [] }) {
+const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
+
+export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
   const [taskName, setTaskName] = useState(task.task_name)
   const [category, setCategory] = useState(task.category || 'Personal')
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
-  const [notes, setNotes] = useState(task.notes || '')
+  const [notes, setNotes] = useState(isChecklist(task) ? '' : (task.notes || ''))
+  const [checklistItems, setChecklistItems] = useState(isChecklist(task) ? (getChecklistItems(task) || []) : null)
+  const [checklistTitle, setChecklistTitle] = useState(getChecklistTitle(task) ?? task.task_name)
   const [reminderEnabled, setReminderEnabled] = useState(task.reminder_minutes != null)
   const [reminderMinutes, setReminderMinutes] = useState(task.reminder_minutes || 60)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [newCatInput, setNewCatInput] = useState('')
+  const itemRefs = useRef([])
 
   const isDirty =
     taskName !== task.task_name ||
     category !== task.category ||
     dueDate !== (task.due_date ? task.due_date.slice(0, 16) : '') ||
-    notes !== (task.notes || '') ||
+    (checklistItems
+      ? (JSON.stringify(checklistItems) !== JSON.stringify(getChecklistItems(task) || []) || checklistTitle !== (getChecklistTitle(task) ?? task.task_name))
+      : notes !== (task.notes || '')) ||
     reminderEnabled !== (task.reminder_minutes != null) ||
     (reminderEnabled && reminderMinutes !== task.reminder_minutes)
 
@@ -32,7 +42,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
       task_name: taskName,
       category,
       due_date: dueDate ? new Date(dueDate).toISOString() : null,
-      notes,
+      notes: checklistItems ? encodeChecklist(checklistItems, checklistTitle) : notes,
       reminder_minutes: reminderEnabled ? reminderMinutes : null,
     })
     setSaving(false)
@@ -61,8 +71,14 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 pb-8">
+          <p className="text-slate-400 text-[11px] mt-2 mb-3">
+            Created {new Date(task.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            {' · '}
+            {new Date(task.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </p>
+
           {task.content && task.content !== task.task_name && (
-            <div className="bg-accent-pale border border-accent-light/30 rounded-xl px-3 py-2.5 mb-4 mt-2">
+            <div className="bg-accent-pale border border-accent-light/30 rounded-xl px-3 py-2.5 mb-4">
               <p className="text-accent-deep text-[10px] font-semibold uppercase tracking-wider mb-0.5">Original input</p>
               <p className="text-accent-deep/70 text-xs italic">"{task.content}"</p>
             </div>
@@ -80,7 +96,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
 
           <div className="mb-4">
             <label className="text-slate-400 text-xs font-medium block mb-1.5">Category</label>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+            <div className="flex gap-2 overflow-x-auto py-1.5 scrollbar-hide -mx-1 px-1">
               {allCategories.map(cat => {
                 const isSelected = category === cat.name
                 const catColors  = getCategoryColor(cat.name, categories)
@@ -90,14 +106,13 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                     key={cat.name}
                     onClick={() => setCategory(cat.name)}
                     className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-offset-1 scale-105'
-                        : 'opacity-60 hover:opacity-90'
+                      isSelected ? '' : 'opacity-60 hover:opacity-90'
                     }`}
-                    style={isSelected
-                      ? { backgroundColor: catColors.bg, color: catColors.text, ringColor: catColors.border }
-                      : { backgroundColor: catColors.bg, color: catColors.text }
-                    }
+                    style={{
+                      backgroundColor: catColors.bg,
+                      color: catColors.text,
+                      ...(isSelected ? { outline: `2px solid ${catColors.border}`, outlineOffset: '2px' } : {}),
+                    }}
                   >
                     <span>{catEmoji}</span>
                     <span>{cat.name}</span>
@@ -109,7 +124,49 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                   </button>
                 )
               })}
+
+              {!addingCategory && (
+                <button
+                  type="button"
+                  onClick={() => setAddingCategory(true)}
+                  className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+                >+</button>
+              )}
             </div>
+
+            {addingCategory && (
+              <div className="flex gap-1.5 items-center mt-2">
+                <input
+                  type="text"
+                  value={newCatInput}
+                  onChange={e => setNewCatInput(e.target.value)}
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter' && newCatInput.trim() && session) {
+                      const color = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]
+                      const { error } = await createCategory(session.user.id, { name: newCatInput.trim(), color, emoji: '📁' })
+                      if (!error) { setCategory(newCatInput.trim()); onCategoriesChanged?.() }
+                      setAddingCategory(false); setNewCatInput('')
+                    }
+                    if (e.key === 'Escape') { setAddingCategory(false); setNewCatInput('') }
+                  }}
+                  placeholder="New category name..."
+                  autoFocus
+                  className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+                />
+                <button
+                  onClick={async () => {
+                    if (!newCatInput.trim() || !session) return
+                    const color = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]
+                    const { error } = await createCategory(session.user.id, { name: newCatInput.trim(), color, emoji: '📁' })
+                    if (!error) { setCategory(newCatInput.trim()); onCategoriesChanged?.() }
+                    setAddingCategory(false); setNewCatInput('')
+                  }}
+                  disabled={!newCatInput.trim()}
+                  className="px-2.5 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40"
+                >Add</button>
+                <button onClick={() => { setAddingCategory(false); setNewCatInput('') }} className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs">✕</button>
+              </div>
+            )}
           </div>
 
           <div className="mb-4">
@@ -122,16 +179,95 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
             />
           </div>
 
-          <div className="mb-4">
-            <label className="text-slate-400 text-xs font-medium block mb-1.5">Notes</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Add notes..."
-              rows={3}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
-            />
-          </div>
+          {checklistItems ? (
+            <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
+              <input
+                type="text"
+                value={checklistTitle}
+                onChange={e => setChecklistTitle(e.target.value)}
+                className="w-full bg-transparent text-slate-900 font-bold text-base outline-none border-b border-transparent focus:border-slate-200 pb-0.5 mb-3 transition-colors placeholder:text-slate-300"
+                placeholder="List title"
+              />
+              <div className="space-y-2.5">
+                {checklistItems.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 group">
+                    <button
+                      type="button"
+                      onClick={() => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, done: !it.done } : it))}
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        item.done ? 'bg-accent-deep border-accent-deep' : 'border-slate-300'
+                      }`}
+                    >
+                      {item.done && (
+                        <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                          <path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                    <input
+                      ref={el => { itemRefs.current[i] = el }}
+                      type="text"
+                      value={item.text}
+                      onChange={e => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, text: e.target.value } : it))}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (!item.text.trim()) return
+                          setChecklistItems(prev => {
+                            const next = [...prev]
+                            next.splice(i + 1, 0, { text: '', done: false })
+                            return next
+                          })
+                          setTimeout(() => itemRefs.current[i + 1]?.focus(), 0)
+                        } else if (e.key === 'Backspace' && item.text === '') {
+                          e.preventDefault()
+                          if (checklistItems.length > 1) {
+                            setChecklistItems(prev => prev.filter((_, j) => j !== i))
+                            setTimeout(() => itemRefs.current[Math.max(0, i - 1)]?.focus(), 0)
+                          }
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!item.text.trim() && checklistItems.length > 1) {
+                          setChecklistItems(prev => prev.filter((_, j) => j !== i))
+                        }
+                      }}
+                      placeholder={`Item ${i + 1}`}
+                      className={`flex-1 bg-transparent text-sm outline-none placeholder:text-slate-300 ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setChecklistItems(prev => prev.filter((_, j) => j !== i))}
+                      className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    >✕</button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = checklistItems.length
+                    setChecklistItems(prev => [...prev, { text: '', done: false }])
+                    setTimeout(() => itemRefs.current[next]?.focus(), 0)
+                  }}
+                  className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors pt-1"
+                >
+                  <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
+                  <span className="text-sm">Add item</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4">
+              <label className="text-slate-400 text-xs font-medium block mb-1.5">Notes</label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Add notes..."
+                rows={3}
+                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
+              />
+            </div>
+          )}
 
           <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-black/10">
             <div className="flex items-center justify-between">

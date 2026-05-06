@@ -2,10 +2,10 @@ import { supabase } from './supabase'
 
 export const BUILT_IN_CATEGORIES = [
   { name: 'School',   color: '#1A56A0', emoji: '📚' },
-  { name: 'Work',     color: '#2563EB', emoji: '💼' },
-  { name: 'Personal', color: '#3B82F6', emoji: '🙂' },
-  { name: 'Errands',  color: '#64748B', emoji: '🛒' },
-  { name: 'Health',   color: '#059669', emoji: '💪' },
+  { name: 'Work',     color: '#7C3AED', emoji: '💼' },
+  { name: 'Personal', color: '#D97706', emoji: '🙂' },
+  { name: 'Errands',  color: '#0D9488', emoji: '🛒' },
+  { name: 'Health',   color: '#DC2626', emoji: '💪' },
 ]
 
 function hexToRgba(hex, alpha) {
@@ -27,12 +27,12 @@ export function getCategoryColor(name, customCategories = []) {
   }
   const BUILT_IN_COLORS = {
     School:   { bg: '#DBEAFE', border: '#1A56A0', text: '#1A56A0' },
-    Work:     { bg: '#EFF6FF', border: '#2563EB', text: '#2563EB' },
-    Personal: { bg: '#F0F9FF', border: '#3B82F6', text: '#3B82F6' },
-    Errands:  { bg: '#F8FAFC', border: '#64748B', text: '#64748B' },
-    Health:   { bg: '#ECFDF5', border: '#059669', text: '#059669' },
+    Work:     { bg: '#EDE9FE', border: '#7C3AED', text: '#7C3AED' },
+    Personal: { bg: '#FEF3C7', border: '#D97706', text: '#D97706' },
+    Errands:  { bg: '#CCFBF1', border: '#0D9488', text: '#0D9488' },
+    Health:   { bg: '#FEE2E2', border: '#DC2626', text: '#DC2626' },
   }
-  return BUILT_IN_COLORS[name] || { bg: '#F1F5F9', border: '#94A3B8', text: '#94A3B8' }
+  return BUILT_IN_COLORS[name] || { bg: '#EEF3FB', border: '#7A8AA1', text: '#7A8AA1' }
 }
 
 /** Returns emoji for a category */

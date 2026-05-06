@@ -6,12 +6,11 @@ import { formatDueDate, getDateGroup } from '../lib/utils'
 import {
   BUILT_IN_CATEGORIES,
   getCategoryColor,
-  getCategoryEmoji,
   createCategory,
   updateCategory,
   deleteCategory,
 } from '../lib/categories'
-import { parseTask } from '../lib/ai'
+import { parseTask, isChecklist, getChecklistItems } from '../lib/ai'
 import mascot from '../mascots/home-mascot.png'
 
 const DATE_GROUP_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'Done']
@@ -28,6 +27,9 @@ const COLOR_OPTIONS = [
   '#f43f5e','#0ea5e9','#84cc16','#f59e0b',
 ]
 
+const CAT_CODES = { School: 'SCH', Work: 'WRK', Personal: 'PRS', Errands: 'ERR', Health: 'HLT' }
+function getCatCode(name) { return CAT_CODES[name] || (name || '').slice(0, 3).toUpperCase() }
+
 export default function TasksScreen({
   tasks, onTaskUpdated, onOpenTask, onNavigate,
   session, displayName, categories, onCategoriesChanged, onTaskCreated, onTasksChanged,
@@ -35,74 +37,105 @@ export default function TasksScreen({
   const [activeCategory, setActiveCategory] = useState(null)
   const [collapsed, setCollapsed]           = useState({})
   const [showNewCategory, setShowNewCategory] = useState(false)
-  const [categoryToEdit, setCategoryToEdit] = useState(null)
-  const [input, setInput]       = useState('')
-  const [parsing, setParsing]   = useState(false)
+  const [categoryToEdit, setCategoryToEdit]   = useState(null)
+  const [input, setInput]     = useState('')
+  const [parsing, setParsing] = useState(false)
   const [parseCard, setParseCard] = useState(null)
   const [parseError, setParseError] = useState('')
   const inputRef = useRef(null)
 
   const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
+  const openCount = tasks.filter(t => !t.is_complete).length
 
   const isCustomCategory = name => categories.some(cat => cat.name === name)
 
-  function handleRequestEditCategory(category, taskCount) {
-    setCategoryToEdit({ ...category, taskCount })
+  function handleRequestEditCategory(cat, taskCount) {
+    setCategoryToEdit({ ...cat, taskCount })
   }
 
   async function handleEditCategory(values) {
-    if (!categoryToEdit?.id) return { error: 'Could not find this category.' }
-
     const oldName = categoryToEdit.name
     const newName = values.name.trim()
-    const { data, error } = await updateCategory(categoryToEdit.id, { ...values, name: newName })
+    let resultData
 
-    if (error) return { error: 'Could not save changes. Try again.' }
+    if (categoryToEdit.id) {
+      const { data, error } = await updateCategory(categoryToEdit.id, { ...values, name: newName })
+      if (error) return { error: 'Could not save changes. Try again.' }
+      resultData = data
+    } else {
+      // Built-in category: create a user override that getCategoryColor will pick up
+      const { data, error } = await createCategory(session.user.id, { name: newName, color: values.color, emoji: values.emoji })
+      if (error) return { error: 'Could not save changes. Try again.' }
+      resultData = data
+    }
 
     if (newName !== oldName) {
       const { error: moveError } = await supabase
-        .from('tasks')
-        .update({ category: newName })
-        .eq('user_id', session.user.id)
-        .eq('category', oldName)
-
-      if (moveError) {
-        await onCategoriesChanged?.()
-        return { error: 'Saved category, but could not update its tasks.' }
-      }
+        .from('tasks').update({ category: newName })
+        .eq('user_id', session.user.id).eq('category', oldName)
+      if (moveError) { await onCategoriesChanged?.(); return { error: 'Saved category, but could not update its tasks.' } }
     }
-
     await onCategoriesChanged?.()
     await onTasksChanged?.()
-    setActiveCategory(prev => prev?.name === oldName ? data : prev)
+    if (activeCategory?.name === oldName) setActiveCategory(prev => ({ ...prev, name: newName }))
     setCategoryToEdit(null)
-    return { data }
+    return { data: resultData }
   }
 
   async function handleDeleteCategory() {
     if (!categoryToEdit?.id) return { error: 'Could not find this category.' }
-
     const tasksInCategory = tasks.filter(t => t.category === categoryToEdit.name)
-
     if (tasksInCategory.length > 0) {
       const { error: moveError } = await supabase
-        .from('tasks')
-        .update({ category: 'Personal' })
-        .eq('user_id', session.user.id)
-        .eq('category', categoryToEdit.name)
-
+        .from('tasks').update({ category: 'Personal' })
+        .eq('user_id', session.user.id).eq('category', categoryToEdit.name)
       if (moveError) return { error: 'Could not move tasks to Personal. Try again.' }
     }
-
     const { error } = await deleteCategory(categoryToEdit.id)
     if (error) return { error: 'Could not delete category. Try again.' }
-
     await onCategoriesChanged?.()
     await onTasksChanged?.()
-    setActiveCategory(prev => prev?.name === categoryToEdit.name ? null : prev)
+    if (activeCategory?.name === categoryToEdit.name) setActiveCategory(null)
     setCategoryToEdit(null)
     return { data: true }
   }
+
+  async function handleSend() {
+    const trimmed = input.trim()
+    if (!trimmed || parsing) return
+    setParseError('')
+    setParsing(true)
+    setParseCard(null)
+    try {
+      const parsed = await parseTask(trimmed)
+      setParseCard({ raw: trimmed, ...parsed, category: activeCategory?.name || parsed.category || 'Personal' })
+    } catch {
+      setParseError('Could not parse — edit manually.')
+      setParseCard({ raw: trimmed, task: trimmed, due_date: null, category: activeCategory?.name || 'Personal', assignee: null })
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  async function handleConfirm() {
+    if (!parseCard) return
+    const { data, error } = await supabase.from('tasks').insert({
+      user_id: session.user.id, content: parseCard.raw, task_name: parseCard.task,
+      due_date: parseCard.due_date || null, category: parseCard.category || 'Personal',
+      assignee: parseCard.assignee || null,
+    }).select().single()
+    if (!error && data) onTaskCreated?.(data)
+    else onTaskCreated?.({
+      id: crypto.randomUUID(), user_id: session.user.id, space_id: null,
+      content: parseCard.raw, task_name: parseCard.task,
+      due_date: parseCard.due_date || null, category: parseCard.category || 'Personal',
+      assignee: parseCard.assignee || null, is_complete: false,
+      created_at: new Date().toISOString(),
+    })
+    setParseCard(null); setInput(''); setParseError('')
+  }
+
+  function handleEditField(field, value) { setParseCard(prev => ({ ...prev, [field]: value })) }
 
   // ── Folder view ────────────────────────────────────────────────────────────
   if (!activeCategory) {
@@ -110,128 +143,70 @@ export default function TasksScreen({
       ...cat,
       taskCount: tasks.filter(t => t.category === cat.name).length,
     }))
-
-    const withTasks    = folders.filter(f => f.taskCount > 0)
-    const emptyCustom  = categories.filter(c => !withTasks.find(f => f.name === c.name))
+    const withTasks   = folders.filter(f => f.taskCount > 0)
+    const emptyCustom = categories.filter(c => !withTasks.find(f => f.name === c.name))
 
     return (
       <div className="flex flex-col min-h-screen bg-app-bg">
         <ScreenHeader>
           <div>
-            <h1 className="text-slate-900 font-bold text-2xl">My Tasks</h1>
-            <p className="text-slate-400 text-xs mt-0.5">
-              {tasks.filter(t => !t.is_complete).length} pending
-            </p>
+            <h1 className="text-slate-900 font-bold text-2xl">Your Tasks</h1>
+            <p className="text-slate-400 text-xs mt-0.5">{openCount} task{openCount !== 1 ? 's' : ''} open across categories</p>
           </div>
           <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
         </ScreenHeader>
 
         <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4">
           <div className="space-y-3">
-            {/* Folders with tasks */}
             {withTasks.map(folder => {
               const colors = getCategoryColor(folder.name, categories)
-              const emoji  = getCategoryEmoji(folder.name, categories)
-              const canEdit = isCustomCategory(folder.name)
               return (
-                <div
-                  key={folder.name}
-                  className="w-full bg-white rounded-2xl p-4 card-elevated flex items-center gap-4 transition-all active:scale-[0.99] text-left"
-                >
-                  <button
-                    onClick={() => setActiveCategory(folder)}
-                    className="flex flex-1 items-center gap-4 min-w-0 text-left"
-                  >
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-                      style={{ backgroundColor: colors.bg }}
-                    >
-                      {emoji}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: colors.border }} />
-                        <p className="text-slate-900 font-bold text-base truncate">{folder.name}</p>
-                      </div>
-                      <p className="text-slate-400 text-xs mt-0.5 ml-4">
-                        {folder.taskCount} task{folder.taskCount !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 flex-shrink-0">
-                      <path d="M9 18l6-6-6-6"/>
-                    </svg>
-                  </button>
-                  {canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => handleRequestEditCategory(folder, folder.taskCount)}
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors flex-shrink-0"
-                      aria-label={`Edit ${folder.name} category`}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 20h9"/>
-                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                <button key={folder.name} onClick={() => setActiveCategory(folder)} className="w-full bg-white rounded-2xl p-4 card-elevated flex items-center gap-4 transition-all active:scale-[0.99] text-left">
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
+                    <CategoryIcon name={folder.name} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-900 font-semibold text-base truncate">{folder.name}</p>
+                    <p className="text-slate-400 text-xs mt-0.5">{folder.taskCount} task{folder.taskCount !== 1 ? 's' : ''}</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 shrink-0">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </button>
               )
             })}
 
-            {/* Empty custom categories */}
             {emptyCustom.map(cat => {
               const colors = getCategoryColor(cat.name, categories)
-              const emoji  = getCategoryEmoji(cat.name, categories)
               return (
-                <div
-                  key={cat.name}
-                  className="w-full bg-white/60 rounded-2xl p-4 border border-dashed border-slate-200 flex items-center gap-4 transition-all active:scale-[0.99] text-left"
-                >
-                  <button
-                    onClick={() => setActiveCategory(cat)}
-                    className="flex flex-1 items-center gap-4 min-w-0 text-left"
-                  >
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 opacity-50"
-                      style={{ backgroundColor: colors.bg }}
-                    >
-                      {emoji}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-slate-400 font-bold text-base truncate">{cat.name}</p>
-                      <p className="text-slate-300 text-xs mt-0.5">No tasks yet</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRequestEditCategory(cat, 0)}
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors flex-shrink-0"
-                    aria-label={`Edit ${cat.name} category`}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 20h9"/>
-                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                    </svg>
-                  </button>
-                </div>
+                <button key={cat.name} onClick={() => setActiveCategory(cat)} className="w-full bg-white/60 rounded-2xl p-4 border border-dashed border-slate-200 flex items-center gap-4 transition-all active:scale-[0.99] text-left">
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 opacity-40" style={{ backgroundColor: colors.border }}>
+                    <CategoryIcon name={cat.name} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-400 font-semibold text-base truncate">{cat.name}</p>
+                    <p className="text-slate-300 text-xs mt-0.5">No tasks yet</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 shrink-0">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </button>
               )
             })}
 
-            {/* Empty state message when no tasks at all */}
             {withTasks.length === 0 && emptyCustom.length === 0 && (
               <div className="flex flex-col items-center py-10 text-center">
                 <img src={mascot} alt="" className="w-24 h-24 object-contain mb-3 opacity-60" style={{ mixBlendMode: 'multiply' }} />
                 <p className="text-slate-400 text-sm font-medium">No tasks yet</p>
-                <p className="text-slate-300 text-xs mt-1">Add tasks from Home, or create a category below</p>
+                <p className="text-slate-300 text-xs mt-1">Add tasks from Home to get started</p>
               </div>
             )}
 
-            {/* New Category card — always visible */}
             <button
               onClick={() => setShowNewCategory(true)}
               className="w-full bg-transparent border-2 border-dashed border-slate-200 rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.99] hover:border-accent-deep/30"
             >
-              <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 flex-shrink-0">
+              <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 shrink-0">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
@@ -266,115 +241,52 @@ export default function TasksScreen({
     )
   }
 
-  // ── Category detail: derived values ─────────────────────────────────────────
-  const catTasks = activeCategory ? tasks.filter(t => t.category === activeCategory.name) : []
+  // ── Category detail view ───────────────────────────────────────────────────
+  const catTasks = tasks.filter(t => t.category === activeCategory.name)
   const grouped  = {}
   for (const task of catTasks) {
     const group = task.is_complete ? 'Done' : getDateGroup(task.due_date)
     if (!grouped[group]) grouped[group] = []
     grouped[group].push(task)
   }
-  const colors = getCategoryColor(activeCategory?.name, categories)
-  const emoji  = getCategoryEmoji(activeCategory?.name, categories)
-  const canEditActiveCategory = isCustomCategory(activeCategory?.name)
-
-  // ── Category detail: task creation handlers ──────────────────────────────
-  async function handleSend() {
-    const trimmed = input.trim()
-    if (!trimmed || parsing) return
-    setParseError('')
-    setParsing(true)
-    setParseCard(null)
-    try {
-      const parsed = await parseTask(trimmed)
-      // Pre-lock to the active category
-      setParseCard({ raw: trimmed, ...parsed, category: activeCategory?.name || parsed.category })
-    } catch {
-      setParseError('Could not parse — edit manually.')
-      setParseCard({ raw: trimmed, task: trimmed, due_date: null, category: activeCategory?.name || 'Personal', assignee: null })
-    } finally {
-      setParsing(false)
-    }
-  }
-
-  async function handleConfirm() {
-    if (!parseCard) return
-    const { data, error } = await supabase.from('tasks').insert({
-      user_id:   session.user.id,
-      content:   parseCard.raw,
-      task_name: parseCard.task,
-      due_date:  parseCard.due_date || null,
-      category:  parseCard.category || activeCategory?.name || 'Personal',
-      assignee:  parseCard.assignee || null,
-    }).select().single()
-    if (!error && data) onTaskCreated?.(data)
-    else if (error) {
-      // Optimistic fallback
-      onTaskCreated?.({
-        id: crypto.randomUUID(), user_id: session.user.id, space_id: null,
-        content: parseCard.raw, task_name: parseCard.task,
-        due_date: parseCard.due_date || null, category: parseCard.category || 'Personal',
-        assignee: parseCard.assignee || null, is_complete: false,
-        created_at: new Date().toISOString(),
-      })
-    }
-    setParseCard(null)
-    setInput('')
-    setParseError('')
-  }
-
-  function handleEditCatField(field, value) {
-    setParseCard(prev => ({ ...prev, [field]: value }))
-  }
+  const colors = getCategoryColor(activeCategory.name, categories)
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <ScreenHeader className="px-5 pt-6 pb-4 bg-white border-b border-black/6">
-        <div className="flex items-center justify-between mb-3">
+      <ScreenHeader>
+        <div className="flex-1 min-w-0">
           <button
             onClick={() => { setActiveCategory(null); setParseCard(null); setInput('') }}
-            className="flex items-center gap-1.5 text-accent-deep text-sm font-medium"
+            className="flex items-center gap-1.5 text-accent-deep text-sm font-medium mb-2"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6"/>
             </svg>
             All Categories
           </button>
-          <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
-        </div>
-        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div
-              className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
-              style={{ backgroundColor: colors.bg }}
-            >
-              {emoji}
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
+              <CategoryIcon name={activeCategory.name} />
             </div>
             <div>
-              <h1 className="text-slate-900 font-bold text-xl">{activeCategory.name}</h1>
+              <h1 className="text-slate-900 font-bold text-2xl">{activeCategory.name}</h1>
               <p className="text-slate-400 text-xs mt-0.5">
                 {catTasks.filter(t => !t.is_complete).length} pending · {catTasks.filter(t => t.is_complete).length} done
               </p>
             </div>
           </div>
-          {canEditActiveCategory && (
-            <button
-              type="button"
-              onClick={() => handleRequestEditCategory(activeCategory, catTasks.length)}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors flex-shrink-0"
-              aria-label={`Edit ${activeCategory.name} category`}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9"/>
-                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-              </svg>
-            </button>
-          )}
         </div>
-        <div className="h-0.5 rounded-full mt-3 opacity-30" style={{ backgroundColor: colors.border }} />
+        <button
+          onClick={() => handleRequestEditCategory(activeCategory, catTasks.length)}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors shrink-0"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
+        </button>
       </ScreenHeader>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-44 pt-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-5 pb-44 pt-4 space-y-5">
         {catTasks.length === 0 ? (
           <EmptyCategory onNavigate={onNavigate} />
         ) : (
@@ -382,15 +294,14 @@ export default function TasksScreen({
             <section key={group}>
               <button
                 onClick={() => setCollapsed(prev => ({ ...prev, [group]: !prev[group] }))}
-                className="flex items-center gap-2 w-full mb-3"
+                className="flex items-center gap-2 w-full mb-2.5"
               >
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${group === 'Overdue' ? 'bg-red-500' : group === 'Done' ? 'bg-slate-200' : 'bg-slate-800'}`} />
                 <span className={`text-[11px] font-bold uppercase tracking-widest ${
-                  group === 'Overdue' ? 'text-red-500' :
-                  group === 'Today'   ? 'text-accent-deep' :
-                  group === 'Done'    ? 'text-slate-300' : 'text-slate-400'
+                  group === 'Overdue' ? 'text-red-500' : group === 'Done' ? 'text-slate-300' : 'text-slate-800'
                 }`}>{group}</span>
                 <span className="text-[10px] font-semibold text-slate-300 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                  {grouped[group].length}
+                  {String(grouped[group].length).padStart(2, '0')}
                 </span>
                 <span className="ml-auto text-slate-300 text-xs">{collapsed[group] ? '›' : '‹'}</span>
               </button>
@@ -412,8 +323,7 @@ export default function TasksScreen({
         )}
       </div>
 
-      {/* Bottom fixed area: parse card + chat input */}
-      <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
+      <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
           <div className="bg-white rounded-2xl p-4 card-elevated-lg animate-slide-up">
             <div className="flex items-center justify-between mb-3">
@@ -421,98 +331,46 @@ export default function TasksScreen({
               {parseError && <p className="text-amber-500 text-[10px]">{parseError}</p>}
             </div>
             <div className="space-y-2.5 mb-3">
-              {/* Task name */}
-              <div>
-                <p className="text-slate-400 text-[10px] font-semibold mb-1">Task</p>
-                <input
-                  type="text"
-                  value={parseCard.task}
-                  onChange={e => handleEditCatField('task', e.target.value)}
-                  className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2 outline-none border border-black/10 focus:border-accent-deep"
-                />
-              </div>
-              {/* Category pills */}
-              <div>
-                <p className="text-slate-400 text-[10px] font-semibold mb-1.5">Category</p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
-                  {[...BUILT_IN_CATEGORIES, ...categories].map(cat => {
-                    const isSel = parseCard.category === cat.name
-                    const cc    = getCategoryColor(cat.name, categories)
-                    const ce    = getCategoryEmoji(cat.name, categories)
-                    return (
-                      <button
-                        key={cat.name}
-                        type="button"
-                        onClick={() => handleEditCatField('category', cat.name)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
-                          isSel ? 'ring-2 ring-offset-1 scale-105' : 'opacity-50 hover:opacity-80'
-                        }`}
-                        style={{ backgroundColor: cc.bg, color: cc.text }}
-                      >
-                        <span>{ce}</span>
-                        <span>{cat.name}</span>
-                        {isSel && (
-                          <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
-                            <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              {/* Due date */}
+              <input type="text" value={parseCard.task}
+                onChange={e => handleEditField('task', e.target.value)}
+                className="w-full bg-transparent text-slate-900 text-xl font-bold outline-none border-b-2 border-slate-200 focus:border-accent-deep pb-1.5 transition-colors placeholder:text-slate-300"
+                placeholder="Task name"
+              />
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-1">Due Date</p>
-                <input
-                  type="datetime-local"
+                <input type="datetime-local"
                   value={parseCard.due_date ? parseCard.due_date.slice(0, 16) : ''}
-                  onChange={e => handleEditCatField('due_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                  onChange={e => handleEditField('due_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
                   className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-black/10 focus:border-accent-deep"
                 />
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => { setParseCard(null); setParseError('') }}
-                className="flex-1 py-2.5 rounded-xl border border-black/10 text-slate-500 text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
+              <button onClick={() => { setParseCard(null); setParseError('') }}
+                className="flex-1 py-2.5 rounded-xl border border-black/10 text-slate-500 text-sm font-medium">Cancel</button>
+              <button onClick={handleConfirm}
                 className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition-colors active:opacity-90"
-                style={{ backgroundColor: colors.border }}
-              >
+                style={{ backgroundColor: colors.border }}>
                 Add to {activeCategory.name}
               </button>
             </div>
           </div>
         )}
-
         <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 card-elevated">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
+          <input ref={inputRef} type="text" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSend() } }}
-            placeholder={`Add a task to ${activeCategory?.name ?? 'this category'}…`}
+            placeholder={`Add a task to ${activeCategory.name}…`}
             className="flex-1 bg-transparent text-slate-800 text-sm outline-none placeholder:text-slate-300"
           />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || parsing}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 active:opacity-80 flex-shrink-0"
+          <button onClick={handleSend} disabled={!input.trim() || parsing}
+            className="w-8 h-8 rounded-full text-white flex items-center justify-center transition-colors disabled:opacity-40 active:opacity-80 shrink-0"
             style={{ backgroundColor: colors.border }}
           >
-            {parsing ? (
-              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-              </svg>
-            )}
+            {parsing
+              ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            }
           </button>
         </div>
       </div>
@@ -533,13 +391,107 @@ export default function TasksScreen({
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+function FilterPill({ label, active, color, onClick, onEdit }) {
+  return (
+    <div className={`shrink-0 flex items-center rounded-full text-xs font-semibold transition-colors ${
+      active ? 'bg-accent-deep text-white' : 'bg-white text-slate-500 border border-black/10'
+    }`}>
+      <button onClick={onClick} className="flex items-center gap-1.5 pl-3.5 pr-2 py-1.5">
+        {color && !active && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}
+        {label}
+      </button>
+      {onEdit && (
+        <button
+          onClick={e => { e.stopPropagation(); onEdit() }}
+          className={`pr-2.5 py-1.5 transition-colors ${active ? 'text-white/60 hover:text-white' : 'text-slate-300 hover:text-slate-500'}`}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function CategoryIcon({ name }) {
+  const s = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'white', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  if (name === 'School') return (
+    <svg {...s}>
+      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+    </svg>
+  )
+  if (name === 'Work') return (
+    <svg {...s}>
+      <rect x="2" y="7" width="20" height="14" rx="2"/>
+      <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+    </svg>
+  )
+  if (name === 'Personal') return (
+    <svg {...s}>
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+    </svg>
+  )
+  if (name === 'Errands') return (
+    <svg {...s}>
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+  )
+  if (name === 'Health') return (
+    <svg {...s}>
+      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+    </svg>
+  )
+  return (
+    <svg {...s}>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+      <line x1="7" y1="7" x2="7.01" y2="7"/>
+    </svg>
+  )
+}
+
 function TaskCard({ task, colors, onToggle, onOpen }) {
   return (
     <div className="bg-white rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99]">
-      <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: colors.border }} />
-      <button onClick={onToggle} className="w-11 h-11 flex items-center justify-center flex-shrink-0">
+      <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: colors.border }} />
+      <button onClick={onOpen} className="flex-1 py-3.5 pl-3 text-left min-w-0">
+        <p className={`text-sm font-semibold leading-tight truncate ${
+          task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'
+        }`}>
+          {task.task_name}
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[10px] font-bold font-mono" style={{ color: colors.text }}>{task.category}</span>
+          <span className="text-slate-300 text-[10px]">·</span>
+          {task.due_date ? (
+            <span className={`text-xs font-mono ${
+              getDateGroup(task.due_date) === 'Overdue' && !task.is_complete ? 'text-red-500' : 'text-slate-400'
+            }`}>
+              {formatDueDate(task.due_date)}
+            </span>
+          ) : (
+            <span className="text-slate-300 text-xs font-mono">No due date</span>
+          )}
+          {isChecklist(task) && (() => {
+            const items = getChecklistItems(task) || []
+            const done = items.filter(it => it.done).length
+            return (
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                ✓ {done}/{items.length}
+              </span>
+            )
+          })()}
+        </div>
+      </button>
+      <button onClick={onToggle} className="w-11 h-11 flex items-center justify-center shrink-0">
         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-          task.is_complete ? 'bg-accent-deep border-accent-deep' : 'border-slate-300'
+          task.is_complete ? 'bg-accent-deep border-accent-deep' : 'border-slate-200'
         }`}>
           {task.is_complete && (
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
@@ -547,20 +499,6 @@ function TaskCard({ task, colors, onToggle, onOpen }) {
             </svg>
           )}
         </div>
-      </button>
-      <button onClick={onOpen} className="flex-1 py-3.5 pr-3 text-left min-w-0">
-        <p className={`text-sm font-semibold leading-tight truncate ${
-          task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'
-        }`}>
-          {task.task_name}
-        </p>
-        {task.due_date && (
-          <p className={`text-xs mt-0.5 ${
-            getDateGroup(task.due_date) === 'Overdue' && !task.is_complete ? 'text-red-500' : 'text-slate-400'
-          }`}>
-            {formatDueDate(task.due_date)}
-          </p>
-        )}
       </button>
     </div>
   )
@@ -633,7 +571,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
         {/* Live preview */}
         <div className="flex items-center gap-3 mb-5 p-3 bg-slate-50 rounded-2xl">
           <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+            className="w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0"
             style={{ backgroundColor: color + '25' }}
           >
             {emoji}
@@ -644,7 +582,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
               {isEditing ? `${category.taskCount || 0} task${category.taskCount !== 1 ? 's' : ''}` : '0 tasks'}
             </p>
           </div>
-          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
         </div>
 
         {/* Name */}
@@ -728,7 +666,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
           </button>
         </div>
 
-        {isEditing && (
+        {isEditing && category?.id && (
           <button
             onClick={() => { setError(''); setShowDeleteConfirm(true) }}
             disabled={saving || deleting}
@@ -759,7 +697,7 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-60 flex items-end bg-black/50 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget && !deleting) onCancel() }}
     >
       <div className="w-full bg-white rounded-t-3xl p-6 shadow-2xl">
@@ -798,6 +736,39 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
         </div>
       </div>
     </div>
+  )
+}
+
+const ADD_CAT_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
+
+function AddCategoryButton({ session, categories, onCreated }) {
+  const [adding, setAdding] = useState(false)
+  const [val, setVal] = useState('')
+
+  async function handleAdd() {
+    if (!val.trim() || !session) return
+    const color = ADD_CAT_COLORS[Math.floor(Math.random() * ADD_CAT_COLORS.length)]
+    const { error } = await createCategory(session.user.id, { name: val.trim(), color, emoji: '📁' })
+    if (!error) onCreated?.(val.trim())
+    setAdding(false); setVal('')
+  }
+
+  if (adding) return (
+    <div className="flex gap-1.5 items-center w-full mt-1">
+      <input
+        type="text" value={val} onChange={e => setVal(e.target.value)} autoFocus
+        onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setVal('') } }}
+        placeholder="New category..." className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+      />
+      <button onClick={handleAdd} disabled={!val.trim()} className="px-2.5 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40">Add</button>
+      <button onClick={() => { setAdding(false); setVal('') }} className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs">✕</button>
+    </div>
+  )
+
+  return (
+    <button type="button" onClick={() => setAdding(true)}
+      className="shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+    >+</button>
   )
 }
 
