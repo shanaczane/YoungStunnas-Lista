@@ -58,11 +58,10 @@ Input: "${input.replace(/"/g, "'")}"`
 
     const data = await res.json()
     const parsed = JSON.parse(data.response)
-    // If the AI missed the due_date, supplement with our reliable regex extractor
-    if (!parsed.due_date) {
-      const fallback = fallbackParse(input)
-      if (fallback.due_date) parsed.due_date = fallback.due_date
-    }
+    // Always override Ollama's date with our reliable regex extractor —
+    // LLMs are poor at calendar math and consistently return wrong dates
+    const fallback = fallbackParse(input)
+    parsed.due_date = fallback.due_date
     return parsed
   } catch {
     return fallbackParse(input)
@@ -145,6 +144,7 @@ function fallbackParse(input) {
   const task = normalized
     .replace(/\b(by|before|on|this|next)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|eod|end of (day|month|week))\b/gi, '')
     .replace(/\b(today|tomorrow)\b/gi, '')
+    .replace(/\b(this|next)\s+week\b/gi, '')
     .trim()
     .replace(/\s+/g, ' ') || input
 
