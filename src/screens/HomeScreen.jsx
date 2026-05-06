@@ -290,6 +290,7 @@ export default function HomeScreen({
                             onKeyDown={e => {
                               if (e.key === 'Enter') {
                                 e.preventDefault()
+                                if (!item.text.trim()) return
                                 const items = [...parseCard.checklistItems]
                                 items.splice(i + 1, 0, { text: '', done: false })
                                 handleEditField('checklistItems', items)
