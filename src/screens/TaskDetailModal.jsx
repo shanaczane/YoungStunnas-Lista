@@ -88,7 +88,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
 
           <div className="mb-4">
             <label className="text-slate-400 text-xs font-medium block mb-1.5">Category</label>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+            <div className="flex gap-2 overflow-x-auto py-1.5 scrollbar-hide -mx-1 px-1">
               {allCategories.map(cat => {
                 const isSelected = category === cat.name
                 const catColors  = getCategoryColor(cat.name, categories)
@@ -103,7 +103,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                     style={{
                       backgroundColor: catColors.bg,
                       color: catColors.text,
-                      ...(isSelected ? { boxShadow: `0 0 0 2px ${catColors.border}` } : {}),
+                      ...(isSelected ? { outline: `2px solid ${catColors.border}`, outlineOffset: '2px' } : {}),
                     }}
                   >
                     <span>{catEmoji}</span>

@@ -434,7 +434,7 @@ export default function TasksScreen({
               {/* Category pills */}
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-1.5">Category</p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+                <div className="flex gap-2 overflow-x-auto py-1.5 scrollbar-hide -mx-1 px-1">
                   {[...BUILT_IN_CATEGORIES, ...categories].map(cat => {
                     const isSel = parseCard.category === cat.name
                     const cc    = getCategoryColor(cat.name, categories)
@@ -445,9 +445,9 @@ export default function TasksScreen({
                         type="button"
                         onClick={() => handleEditCatField('category', cat.name)}
                         className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
-                          isSel ? 'ring-2 ring-offset-1 scale-105' : 'opacity-50 hover:opacity-80'
+                          isSel ? '' : 'opacity-50 hover:opacity-80'
                         }`}
-                        style={{ backgroundColor: cc.bg, color: cc.text }}
+                        style={{ backgroundColor: cc.bg, color: cc.text, ...(isSel ? { outline: `2px solid ${cc.border}`, outlineOffset: '2px' } : {}) }}
                       >
                         <span>{ce}</span>
                         <span>{cat.name}</span>

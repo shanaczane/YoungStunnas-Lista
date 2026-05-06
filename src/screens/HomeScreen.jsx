@@ -408,7 +408,7 @@ export default function HomeScreen({
               )}
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-2">Category</p>
-                <div className="flex gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-hide">
+                <div className="flex gap-2 overflow-x-auto py-1.5 scrollbar-hide">
                   {[...BUILT_IN_CATEGORIES, ...categories].map(cat => {
                     const isSelected = (parseCard.category || 'Personal') === cat.name
                     const catColors  = getCategoryColor(cat.name, categories)
@@ -418,9 +418,9 @@ export default function HomeScreen({
                         type="button"
                         onClick={() => handleEditField('category', cat.name)}
                         className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
-                          isSelected ? 'ring-2 ring-inset' : 'opacity-55 hover:opacity-80'
+                          isSelected ? '' : 'opacity-55 hover:opacity-80'
                         }`}
-                        style={{ backgroundColor: catColors.bg, color: catColors.text, ...(isSelected ? { boxShadow: `0 0 0 2px ${catColors.border}` } : {}) }}
+                        style={{ backgroundColor: catColors.bg, color: catColors.text, ...(isSelected ? { outline: `2px solid ${catColors.border}`, outlineOffset: '2px' } : {}) }}
                       >
                         <span>{cat.emoji || '📁'}</span>
                         <span>{cat.name}</span>
