@@ -106,7 +106,7 @@ export default function HomeScreen({
   async function handleConfirm() {
     if (!parseCard) return
     const encodedNotes = parseCard.checklistItems
-      ? encodeChecklist(parseCard.checklistItems)
+      ? encodeChecklist(parseCard.checklistItems, parseCard.checklistTitle ?? '')
       : (parseCard.notes || undefined)
     const { data, error } = await supabase.from('tasks').insert({
       user_id: session.user.id,

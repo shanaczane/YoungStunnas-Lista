@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji, createCategory } from '../lib/categories'
-import { isChecklist, getChecklistItems, encodeChecklist } from '../lib/ai'
+import { isChecklist, getChecklistItems, getChecklistTitle, encodeChecklist } from '../lib/ai'
 
 const REMINDER_OPTIONS = [
   { label: '15 min before', value: 15 },
@@ -16,6 +16,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
   const [notes, setNotes] = useState(isChecklist(task) ? '' : (task.notes || ''))
   const [checklistItems, setChecklistItems] = useState(isChecklist(task) ? (getChecklistItems(task) || []) : null)
+  const [checklistTitle, setChecklistTitle] = useState(getChecklistTitle(task) ?? task.task_name)
   const [reminderEnabled, setReminderEnabled] = useState(task.reminder_minutes != null)
   const [reminderMinutes, setReminderMinutes] = useState(task.reminder_minutes || 60)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -28,7 +29,9 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
     taskName !== task.task_name ||
     category !== task.category ||
     dueDate !== (task.due_date ? task.due_date.slice(0, 16) : '') ||
-    (checklistItems ? JSON.stringify(checklistItems) !== JSON.stringify(getChecklistItems(task) || []) : notes !== (task.notes || '')) ||
+    (checklistItems
+      ? (JSON.stringify(checklistItems) !== JSON.stringify(getChecklistItems(task) || []) || checklistTitle !== (getChecklistTitle(task) ?? task.task_name))
+      : notes !== (task.notes || '')) ||
     reminderEnabled !== (task.reminder_minutes != null) ||
     (reminderEnabled && reminderMinutes !== task.reminder_minutes)
 
@@ -39,7 +42,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
       task_name: taskName,
       category,
       due_date: dueDate ? new Date(dueDate).toISOString() : null,
-      notes: checklistItems ? encodeChecklist(checklistItems) : notes,
+      notes: checklistItems ? encodeChecklist(checklistItems, checklistTitle) : notes,
       reminder_minutes: reminderEnabled ? reminderMinutes : null,
     })
     setSaving(false)
@@ -180,8 +183,8 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
             <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
               <input
                 type="text"
-                value={taskName}
-                onChange={e => setTaskName(e.target.value)}
+                value={checklistTitle}
+                onChange={e => setChecklistTitle(e.target.value)}
                 className="w-full bg-transparent text-slate-900 font-bold text-base outline-none border-b border-transparent focus:border-slate-200 pb-0.5 mb-3 transition-colors placeholder:text-slate-300"
                 placeholder="List title"
               />

@@ -7,11 +7,22 @@ export function isChecklist(task) {
 
 export function getChecklistItems(task) {
   if (!isChecklist(task)) return null
-  try { return JSON.parse(task.notes.slice(CHECKLIST_PREFIX.length)) } catch { return null }
+  try {
+    const data = JSON.parse(task.notes.slice(CHECKLIST_PREFIX.length))
+    return Array.isArray(data) ? data : (data.items ?? null)
+  } catch { return null }
 }
 
-export function encodeChecklist(items) {
-  return CHECKLIST_PREFIX + JSON.stringify(items)
+export function getChecklistTitle(task) {
+  if (!isChecklist(task)) return null
+  try {
+    const data = JSON.parse(task.notes.slice(CHECKLIST_PREFIX.length))
+    return Array.isArray(data) ? null : (data.title ?? null)
+  } catch { return null }
+}
+
+export function encodeChecklist(items, title = '') {
+  return CHECKLIST_PREFIX + JSON.stringify({ title, items })
 }
 
 /**
