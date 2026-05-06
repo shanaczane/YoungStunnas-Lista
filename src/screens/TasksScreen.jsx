@@ -344,7 +344,7 @@ function FilterPill({ label, active, color, onClick }) {
 function TaskCard({ task, colors, onToggle, onOpen }) {
   return (
     <div className="bg-white rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99]">
-      <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: colors.border }} />
+      <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: colors.border }} />
       <button onClick={onOpen} className="flex-1 py-3.5 pl-3 text-left min-w-0">
         <p className={`text-sm font-semibold leading-tight truncate ${
           task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'

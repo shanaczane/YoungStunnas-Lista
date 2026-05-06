@@ -208,13 +208,14 @@ export default function HomeScreen({
                       <button
                         key={task.id}
                         onClick={() => onOpenTask(task.id)}
-                        className="shrink-0 bg-white rounded-2xl px-4 py-3 text-left min-w-37 card-elevated transition-all active:scale-95"
+                        className="shrink-0 bg-white rounded-2xl text-left min-w-37 card-elevated transition-all active:scale-95 overflow-hidden flex items-stretch"
                       >
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: catColors?.bg, color: catColors?.text }}>{task.category}</span>
+                        <div className="w-1 shrink-0" style={{ backgroundColor: catColors?.border }} />
+                        <div className="px-3 py-3">
+                          <p className="text-[10px] font-bold font-mono mb-1.5" style={{ color: catColors?.text }}>{task.category}</p>
+                          <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2 mb-1.5">{task.task_name}</p>
+                          <p className="text-slate-400 text-[10px] font-mono">{formatDueDate(task.due_date)}</p>
                         </div>
-                        <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2 mb-1.5">{task.task_name}</p>
-                        <p className="text-slate-400 text-[10px] font-mono">{formatDueDate(task.due_date)}</p>
                       </button>
                     )
                   })}
