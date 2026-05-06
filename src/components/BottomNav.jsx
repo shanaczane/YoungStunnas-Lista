@@ -10,8 +10,8 @@ export default function BottomNav({ active, onNavigate, onAddTask }) {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 flex items-end z-20"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: '0 -2px 12px rgba(0,0,0,0.06)' }}
+      className="fixed bottom-0 left-0 right-0 border-t border-black/8 flex items-end z-20 backdrop-blur-md"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)', backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 -2px 12px rgba(10,46,92,0.07)' }}
     >
       {leftTabs.map(tab => (
         <TabButton key={tab.id} tab={tab} active={active} onNavigate={onNavigate} />
@@ -22,7 +22,7 @@ export default function BottomNav({ active, onNavigate, onAddTask }) {
         <button
           onClick={onAddTask}
           className="fab w-14 h-14 bg-accent-deep rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
-          style={{ boxShadow: '0 4px 16px rgba(26,79,214,0.45)' }}
+          style={{ boxShadow: '0 4px 16px rgba(10,46,92,0.45)' }}
           aria-label="Add task"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
