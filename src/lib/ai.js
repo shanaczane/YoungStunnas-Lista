@@ -137,6 +137,26 @@ const TIME_CONTEXT = {
   'midnight':  0,
 }
 
+export async function parseImageList(base64Image) {
+  const model = import.meta.env.VITE_OLLAMA_VISION_MODEL || 'llava'
+  const prompt = `Extract any list or checklist items from this image.
+Return ONLY a comma-separated string in this exact format: "Title: item1, item2, item3"
+Use the title or heading you see in the image. No explanation. No markdown. Just the one line.`
+
+  try {
+    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt, images: [base64Image], stream: false }),
+    })
+    if (!res.ok) throw new Error(`Ollama error ${res.status}`)
+    const data = await res.json()
+    return data.response?.trim() || null
+  } catch {
+    return null
+  }
+}
+
 export async function parseTask(input) {
   const today = toLocalISO(new Date()).split('T')[0]
 
