@@ -11,7 +11,7 @@ import {
   updateCategory,
   deleteCategory,
 } from '../lib/categories'
-import { parseTask } from '../lib/ai'
+import { parseTask, isChecklist, getChecklistItems } from '../lib/ai'
 import mascot from '../mascots/home-mascot.png'
 
 const DATE_GROUP_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'Done']
@@ -434,7 +434,7 @@ export default function TasksScreen({
               {/* Category pills */}
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-1.5">Category</p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+                <div className="flex gap-2 overflow-x-auto py-1.5 scrollbar-hide -mx-1 px-1">
                   {[...BUILT_IN_CATEGORIES, ...categories].map(cat => {
                     const isSel = parseCard.category === cat.name
                     const cc    = getCategoryColor(cat.name, categories)
@@ -445,9 +445,9 @@ export default function TasksScreen({
                         type="button"
                         onClick={() => handleEditCatField('category', cat.name)}
                         className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
-                          isSel ? 'ring-2 ring-offset-1 scale-105' : 'opacity-50 hover:opacity-80'
+                          isSel ? '' : 'opacity-50 hover:opacity-80'
                         }`}
-                        style={{ backgroundColor: cc.bg, color: cc.text }}
+                        style={{ backgroundColor: cc.bg, color: cc.text, ...(isSel ? { outline: `2px solid ${cc.border}`, outlineOffset: '2px' } : {}) }}
                       >
                         <span>{ce}</span>
                         <span>{cat.name}</span>
@@ -459,6 +459,12 @@ export default function TasksScreen({
                       </button>
                     )
                   })}
+
+                  <AddCategoryButton
+                    session={session}
+                    categories={categories}
+                    onCreated={name => { handleEditCatField('category', name); onCategoriesChanged?.() }}
+                  />
                 </div>
               </div>
               {/* Due date */}
@@ -554,13 +560,24 @@ function TaskCard({ task, colors, onToggle, onOpen }) {
         }`}>
           {task.task_name}
         </p>
-        {task.due_date && (
-          <p className={`text-xs mt-0.5 ${
-            getDateGroup(task.due_date) === 'Overdue' && !task.is_complete ? 'text-red-500' : 'text-slate-400'
-          }`}>
-            {formatDueDate(task.due_date)}
-          </p>
-        )}
+        <div className="flex items-center gap-2 mt-0.5">
+          {task.due_date && (
+            <p className={`text-xs ${
+              getDateGroup(task.due_date) === 'Overdue' && !task.is_complete ? 'text-red-500' : 'text-slate-400'
+            }`}>
+              {formatDueDate(task.due_date)}
+            </p>
+          )}
+          {isChecklist(task) && (() => {
+            const items = getChecklistItems(task) || []
+            const done = items.filter(it => it.done).length
+            return (
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                ✓ {done}/{items.length}
+              </span>
+            )
+          })()}
+        </div>
       </button>
     </div>
   )
@@ -798,6 +815,39 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
         </div>
       </div>
     </div>
+  )
+}
+
+const ADD_CAT_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
+
+function AddCategoryButton({ session, categories, onCreated }) {
+  const [adding, setAdding] = useState(false)
+  const [val, setVal] = useState('')
+
+  async function handleAdd() {
+    if (!val.trim() || !session) return
+    const color = ADD_CAT_COLORS[Math.floor(Math.random() * ADD_CAT_COLORS.length)]
+    const { error } = await createCategory(session.user.id, { name: val.trim(), color, emoji: '📁' })
+    if (!error) onCreated?.(val.trim())
+    setAdding(false); setVal('')
+  }
+
+  if (adding) return (
+    <div className="flex gap-1.5 items-center w-full mt-1">
+      <input
+        type="text" value={val} onChange={e => setVal(e.target.value)} autoFocus
+        onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setVal('') } }}
+        placeholder="New category..." className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+      />
+      <button onClick={handleAdd} disabled={!val.trim()} className="px-2.5 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40">Add</button>
+      <button onClick={() => { setAdding(false); setVal('') }} className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs">✕</button>
+    </div>
+  )
+
+  return (
+    <button type="button" onClick={() => setAdding(true)}
+      className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+    >+</button>
   )
 }
 

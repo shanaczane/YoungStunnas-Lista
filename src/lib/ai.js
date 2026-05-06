@@ -1,3 +1,123 @@
+// ─── Checklist helpers ────────────────────────────────────────────────────────
+export const CHECKLIST_PREFIX = '__checklist__'
+
+export function isChecklist(task) {
+  return task?.notes?.startsWith(CHECKLIST_PREFIX) ?? false
+}
+
+export function getChecklistItems(task) {
+  if (!isChecklist(task)) return null
+  try {
+    const data = JSON.parse(task.notes.slice(CHECKLIST_PREFIX.length))
+    return Array.isArray(data) ? data : (data.items ?? null)
+  } catch { return null }
+}
+
+export function getChecklistTitle(task) {
+  if (!isChecklist(task)) return null
+  try {
+    const data = JSON.parse(task.notes.slice(CHECKLIST_PREFIX.length))
+    return Array.isArray(data) ? null : (data.title ?? null)
+  } catch { return null }
+}
+
+export function encodeChecklist(items, title = '') {
+  return CHECKLIST_PREFIX + JSON.stringify({ title, items })
+}
+
+/**
+ * Returns { title, items } if input looks like a list, otherwise null.
+ * Conservative — requires a colon separator OR 3+ commas to avoid false positives.
+ */
+export function detectChecklist(input) {
+  // Strip surrounding quotes from the whole input
+  input = input.replace(/^["']|["']$/g, '').trim()
+
+  const commas = (input.match(/,/g) || []).length
+  const hasColon = input.includes(':')
+
+  if (!hasColon && commas < 2) return null
+
+  // Skip plain sentences that happen to have commas (e.g. "call John, it's urgent")
+  // Heuristic: if average segment length > 30 chars it's prose, not a list
+  const segments = input.split(/,|:/).map(s => s.trim()).filter(Boolean)
+  const avgLen = segments.reduce((a, s) => a + s.length, 0) / segments.length
+  if (avgLen > 35) return null
+
+  let title = 'Checklist'
+  let itemsText = input
+
+  // "Title: item1, item2" pattern
+  const colonMatch = input.match(/^([^,\n]{2,50}):\s*(.+)$/s)
+  if (colonMatch) {
+    title = colonMatch[1].trim()
+    itemsText = colonMatch[2]
+  } else if (commas >= 2) {
+    const firstCommaIdx = input.indexOf(',')
+    const firstPart = input.slice(0, firstCommaIdx).trim()
+    // Only treat first segment as title if it has no leading digit (not an item itself)
+    if (!/^\d/.test(firstPart) && firstPart.split(' ').length <= 6) {
+      title = firstPart
+      itemsText = input.slice(firstCommaIdx + 1)
+    }
+  }
+
+  title = title.replace(/^["']|["']$/g, '').trim()
+
+  const items = itemsText
+    .split(/,|\s+and\s+/i)
+    .map(s => s.replace(/^["']|["']$/g, '').trim())
+    .filter(s => s.length > 0 && s.length < 100)
+
+  if (items.length < 2) return null
+
+  return { title, items: items.map(text => ({ text, done: false })) }
+}
+
+// ─── Clean raw input for note field ──────────────────────────────────────────
+export function cleanInput(input) {
+  const ABBREVS = {
+    'mon': 'Monday', 'tue': 'Tuesday', 'tues': 'Tuesday',
+    'wed': 'Wednesday', 'thu': 'Thursday', 'thurs': 'Thursday',
+    'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday',
+  }
+  let result = input.trim()
+
+  // Expand day abbreviations (preserve original casing pattern)
+  for (const [abbrev, full] of Object.entries(ABBREVS)) {
+    result = result.replace(
+      new RegExp(`\\b${abbrev}\\b`, 'gi'),
+      m => m[0] === m[0].toUpperCase() ? full : full.toLowerCase()
+    )
+  }
+
+  // Resolve "this week" day → actual date string
+  const now = new Date()
+  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+  result = result.replace(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+this\s+week\b/gi, (_, day) => {
+    const idx = days.indexOf(day.toLowerCase())
+    const diff = (idx - now.getDay() + 7) % 7 || 7
+    const target = new Date(now)
+    target.setDate(now.getDate() + diff)
+    return target.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  })
+
+  // Resolve "next [day]"
+  result = result.replace(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, (_, day) => {
+    const idx = days.indexOf(day.toLowerCase())
+    const diff = (idx - now.getDay() + 7) % 7 || 7
+    const target = new Date(now)
+    target.setDate(now.getDate() + diff)
+    return target.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  })
+
+  // Capitalize first letter
+  result = result.charAt(0).toUpperCase() + result.slice(1)
+
+  return result.replace(/\s+/g, ' ').trim()
+}
+
+// ─── Ollama / parse ───────────────────────────────────────────────────────────
 const OLLAMA_URL = import.meta.env.VITE_OLLAMA_URL || 'http://localhost:11434'
 const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'llama3.2'
 
