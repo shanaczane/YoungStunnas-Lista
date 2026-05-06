@@ -98,14 +98,13 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                     key={cat.name}
                     onClick={() => setCategory(cat.name)}
                     className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-offset-1 scale-105'
-                        : 'opacity-60 hover:opacity-90'
+                      isSelected ? '' : 'opacity-60 hover:opacity-90'
                     }`}
-                    style={isSelected
-                      ? { backgroundColor: catColors.bg, color: catColors.text, ringColor: catColors.border }
-                      : { backgroundColor: catColors.bg, color: catColors.text }
-                    }
+                    style={{
+                      backgroundColor: catColors.bg,
+                      color: catColors.text,
+                      ...(isSelected ? { boxShadow: `0 0 0 2px ${catColors.border}` } : {}),
+                    }}
                   >
                     <span>{catEmoji}</span>
                     <span>{cat.name}</span>
