@@ -459,6 +459,12 @@ export default function TasksScreen({
                       </button>
                     )
                   })}
+
+                  <AddCategoryButton
+                    session={session}
+                    categories={categories}
+                    onCreated={name => { handleEditCatField('category', name); onCategoriesChanged?.() }}
+                  />
                 </div>
               </div>
               {/* Due date */}
@@ -809,6 +815,39 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
         </div>
       </div>
     </div>
+  )
+}
+
+const ADD_CAT_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
+
+function AddCategoryButton({ session, categories, onCreated }) {
+  const [adding, setAdding] = useState(false)
+  const [val, setVal] = useState('')
+
+  async function handleAdd() {
+    if (!val.trim() || !session) return
+    const color = ADD_CAT_COLORS[Math.floor(Math.random() * ADD_CAT_COLORS.length)]
+    const { error } = await createCategory(session.user.id, { name: val.trim(), color, emoji: '📁' })
+    if (!error) onCreated?.(val.trim())
+    setAdding(false); setVal('')
+  }
+
+  if (adding) return (
+    <div className="flex gap-1.5 items-center w-full mt-1">
+      <input
+        type="text" value={val} onChange={e => setVal(e.target.value)} autoFocus
+        onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setVal('') } }}
+        placeholder="New category..." className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+      />
+      <button onClick={handleAdd} disabled={!val.trim()} className="px-2.5 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40">Add</button>
+      <button onClick={() => { setAdding(false); setVal('') }} className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs">✕</button>
+    </div>
+  )
+
+  return (
+    <button type="button" onClick={() => setAdding(true)}
+      className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+    >+</button>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji } from '../lib/categories'
+import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji, createCategory } from '../lib/categories'
 import { isChecklist, getChecklistItems, encodeChecklist } from '../lib/ai'
 
 const REMINDER_OPTIONS = [
@@ -8,7 +8,9 @@ const REMINDER_OPTIONS = [
   { label: '1 day before', value: 1440 },
 ]
 
-export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, categories = [] }) {
+const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
+
+export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
   const [taskName, setTaskName] = useState(task.task_name)
   const [category, setCategory] = useState(task.category || 'Personal')
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
@@ -18,6 +20,8 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   const [reminderMinutes, setReminderMinutes] = useState(task.reminder_minutes || 60)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [newCatInput, setNewCatInput] = useState('')
 
   const isDirty =
     taskName !== task.task_name ||
@@ -116,7 +120,49 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                   </button>
                 )
               })}
+
+              {!addingCategory && (
+                <button
+                  type="button"
+                  onClick={() => setAddingCategory(true)}
+                  className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+                >+</button>
+              )}
             </div>
+
+            {addingCategory && (
+              <div className="flex gap-1.5 items-center mt-2">
+                <input
+                  type="text"
+                  value={newCatInput}
+                  onChange={e => setNewCatInput(e.target.value)}
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter' && newCatInput.trim() && session) {
+                      const color = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]
+                      const { error } = await createCategory(session.user.id, { name: newCatInput.trim(), color, emoji: '📁' })
+                      if (!error) { setCategory(newCatInput.trim()); onCategoriesChanged?.() }
+                      setAddingCategory(false); setNewCatInput('')
+                    }
+                    if (e.key === 'Escape') { setAddingCategory(false); setNewCatInput('') }
+                  }}
+                  placeholder="New category name..."
+                  autoFocus
+                  className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+                />
+                <button
+                  onClick={async () => {
+                    if (!newCatInput.trim() || !session) return
+                    const color = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]
+                    const { error } = await createCategory(session.user.id, { name: newCatInput.trim(), color, emoji: '📁' })
+                    if (!error) { setCategory(newCatInput.trim()); onCategoriesChanged?.() }
+                    setAddingCategory(false); setNewCatInput('')
+                  }}
+                  disabled={!newCatInput.trim()}
+                  className="px-2.5 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40"
+                >Add</button>
+                <button onClick={() => { setAddingCategory(false); setNewCatInput('') }} className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs">✕</button>
+              </div>
+            )}
           </div>
 
           <div className="mb-4">

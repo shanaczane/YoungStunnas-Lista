@@ -174,9 +174,11 @@ export default function App() {
         <TaskDetailModal
           task={selectedTask}
           categories={categories}
+          session={session}
           onClose={closeTask}
           onUpdate={handleTaskUpdated}
           onDelete={handleTaskDeleted}
+          onCategoriesChanged={() => loadCategories(session.user.id)}
         />
       )}
     </div>
