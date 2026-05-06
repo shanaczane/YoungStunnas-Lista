@@ -63,8 +63,14 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 pb-8">
+          <p className="text-slate-400 text-[11px] mt-2 mb-3">
+            Created {new Date(task.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            {' · '}
+            {new Date(task.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </p>
+
           {task.content && task.content !== task.task_name && (
-            <div className="bg-accent-pale border border-accent-light/30 rounded-xl px-3 py-2.5 mb-4 mt-2">
+            <div className="bg-accent-pale border border-accent-light/30 rounded-xl px-3 py-2.5 mb-4">
               <p className="text-accent-deep text-[10px] font-semibold uppercase tracking-wider mb-0.5">Original input</p>
               <p className="text-accent-deep/70 text-xs italic">"{task.content}"</p>
             </div>
