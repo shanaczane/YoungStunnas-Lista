@@ -10,6 +10,7 @@ import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/ca
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
+
 export default function HomeScreen({
   session,
   displayName,
@@ -196,29 +197,34 @@ export default function HomeScreen({
           <>
             {upcoming.length > 0 && (
               <section className="px-5 pt-6 mb-6">
-                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Due Soon</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Coming Up</p>
+                  <button onClick={() => onNavigate('tasks')} className="text-accent-deep text-xs font-semibold">See all →</button>
+                </div>
                 <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-                  {upcoming.map(task => (
-                    <button
-                      key={task.id}
-                      onClick={() => onOpenTask(task.id)}
-                      className="flex-shrink-0 bg-white rounded-2xl px-4 py-3 text-left min-w-[152px] card-elevated transition-all active:scale-95"
-                    >
-                      <div
-                        className="w-6 h-1 rounded-full mb-2"
-                        style={{ backgroundColor: getCategoryColor(task.category, categories)?.border }}
-                      />
-                      <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2">{task.task_name}</p>
-                      <p className="text-slate-400 text-[10px] mt-1.5">{formatDueDate(task.due_date)}</p>
-                    </button>
-                  ))}
+                  {upcoming.map(task => {
+                    const catColors = getCategoryColor(task.category, categories)
+                    return (
+                      <button
+                        key={task.id}
+                        onClick={() => onOpenTask(task.id)}
+                        className="shrink-0 bg-white rounded-2xl px-4 py-3 text-left min-w-37 card-elevated transition-all active:scale-95"
+                      >
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: catColors?.bg, color: catColors?.text }}>{task.category}</span>
+                        </div>
+                        <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2 mb-1.5">{task.task_name}</p>
+                        <p className="text-slate-400 text-[10px] font-mono">{formatDueDate(task.due_date)}</p>
+                      </button>
+                    )
+                  })}
                 </div>
               </section>
             )}
 
             <section className="px-5 pt-2">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Tasks</p>
+                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Captures</p>
                 <div className="flex items-center gap-2">
                   <div className="relative">
                     <button
@@ -262,43 +268,39 @@ export default function HomeScreen({
                 </div>
               </div>
               <div className="space-y-2.5">
-                {recent.map(task => (
-                  <button
-                    key={task.id}
-                    onClick={() => onOpenTask(task.id)}
-                    className="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 card-elevated transition-all active:scale-[0.99] text-left"
-                  >
-                    <div
-                      className="w-1 self-stretch rounded-full flex-shrink-0"
-                      style={{ backgroundColor: getCategoryColor(task.category, categories)?.border }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
-                        {task.task_name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-slate-400 text-xs">
-                          {task.due_date ? formatDueDate(task.due_date) : 'No due date'}
-                        </p>
-                        {isChecklist(task) && (() => {
-                          const items = getChecklistItems(task) || []
-                          const done = items.filter(it => it.done).length
-                          return (
-                            <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                              ✓ {done}/{items.length}
-                            </span>
-                          )
-                        })()}
-                      </div>
-                    </div>
-                    <span
-                      className="flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      style={{ backgroundColor: getCategoryColor(task.category, categories)?.bg, color: getCategoryColor(task.category, categories)?.text }}
+                {recent.map(task => {
+                  const catColors = getCategoryColor(task.category, categories)
+                  return (
+                    <button
+                      key={task.id}
+                      onClick={() => onOpenTask(task.id)}
+                      className="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 card-elevated transition-all active:scale-[0.99] text-left"
                     >
-                      {task.category}
-                    </span>
-                  </button>
-                ))}
+                      <div
+                        className="w-1 self-stretch rounded-full shrink-0"
+                        style={{ backgroundColor: catColors?.border }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-900'}`}>
+                          {task.task_name}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-bold font-mono" style={{ color: catColors?.text }}>{task.category}</span>
+                          <span className="text-slate-300 text-[10px]">·</span>
+                          <span className="text-slate-400 text-xs font-mono">
+                            {task.due_date ? formatDueDate(task.due_date) : 'No due date'}
+                          </span>
+                          {isChecklist(task) && (() => {
+                            const items = getChecklistItems(task) || []
+                            const done = items.filter(it => it.done).length
+                            return <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">✓ {done}/{items.length}</span>
+                          })()}
+                        </div>
+                      </div>
+                      <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0" />
+                    </button>
+                  )
+                })}
               </div>
             </section>
           </>
