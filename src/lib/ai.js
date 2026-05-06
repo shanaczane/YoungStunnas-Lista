@@ -57,18 +57,25 @@ Input: "${input.replace(/"/g, "'")}"`
     if (!res.ok) throw new Error(`Ollama error ${res.status}`)
 
     const data = await res.json()
-    return JSON.parse(data.response)
+    const parsed = JSON.parse(data.response)
+    // If the AI missed the due_date, supplement with our reliable regex extractor
+    if (!parsed.due_date) {
+      const fallback = fallbackParse(input)
+      if (fallback.due_date) parsed.due_date = fallback.due_date
+    }
+    return parsed
   } catch {
     return fallbackParse(input)
   }
 }
 
 function fallbackParse(input) {
-  // Normalize day abbreviations before any other processing
-  let lower = input.toLowerCase()
+  // Normalize day abbreviations for all processing (preserves original casing)
+  let normalized = input
   for (const [abbrev, full] of Object.entries(DAY_ABBREVS)) {
-    lower = lower.replace(new RegExp(`\\b${abbrev}\\b`, 'g'), full)
+    normalized = normalized.replace(new RegExp(`\\b${abbrev}\\b`, 'gi'), full)
   }
+  const lower = normalized.toLowerCase()
 
   let category = 'Personal'
   if (/thesis|study|class|homework|assignment|exam|school|university|course/.test(lower)) category = 'School'
@@ -135,7 +142,7 @@ function fallbackParse(input) {
     || input.match(/(assign(?:ed)? to|for)\s+([A-Z][a-z]+)/i)
   if (assigneeMatch) assignee = assigneeMatch[1] || assigneeMatch[2]
 
-  const task = input
+  const task = normalized
     .replace(/\b(by|before|on|this|next)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|eod|end of (day|month|week))\b/gi, '')
     .replace(/\b(today|tomorrow)\b/gi, '')
     .trim()
