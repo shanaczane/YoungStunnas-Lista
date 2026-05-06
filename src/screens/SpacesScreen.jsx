@@ -214,7 +214,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
 
   async function handleConfirm() {
     if (!parseCard) return
-    await supabase.from('tasks').insert({
+    const { error } = await supabase.from('tasks').insert({
       user_id: session.user.id,
       space_id: space.id,
       content: parseCard.raw,
@@ -223,6 +223,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
       category: parseCard.category || 'Work',
       assignee: parseCard.assignee || null,
     })
+    if (!error) fetchSpaceTasks()
     setParseCard(null)
     setInput('')
   }
