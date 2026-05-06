@@ -351,13 +351,17 @@ function TaskCard({ task, colors, onToggle, onOpen }) {
         }`}>
           {task.task_name}
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
-          {task.due_date && (
-            <p className={`text-xs font-mono ${
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[10px] font-bold font-mono" style={{ color: colors.text }}>{task.category}</span>
+          <span className="text-slate-300 text-[10px]">·</span>
+          {task.due_date ? (
+            <span className={`text-xs font-mono ${
               getDateGroup(task.due_date) === 'Overdue' && !task.is_complete ? 'text-red-500' : 'text-slate-400'
             }`}>
               {formatDueDate(task.due_date)}
-            </p>
+            </span>
+          ) : (
+            <span className="text-slate-300 text-xs font-mono">No due date</span>
           )}
           {isChecklist(task) && (() => {
             const items = getChecklistItems(task) || []

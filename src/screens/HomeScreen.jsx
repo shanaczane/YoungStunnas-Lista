@@ -275,13 +275,13 @@ export default function HomeScreen({
                     <button
                       key={task.id}
                       onClick={() => onOpenTask(task.id)}
-                      className="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 card-elevated transition-all active:scale-[0.99] text-left"
+                      className="w-full bg-white rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] text-left overflow-hidden"
                     >
                       <div
-                        className="w-1 self-stretch rounded-full shrink-0"
+                        className="w-1 self-stretch shrink-0"
                         style={{ backgroundColor: catColors?.border }}
                       />
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 px-4 py-3.5">
                         <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-900'}`}>
                           {task.task_name}
                         </p>
@@ -298,7 +298,7 @@ export default function HomeScreen({
                           })()}
                         </div>
                       </div>
-                      <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0" />
+                      <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0 mr-4" />
                     </button>
                   )
                 })}
