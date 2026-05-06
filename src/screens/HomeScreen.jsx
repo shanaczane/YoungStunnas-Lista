@@ -88,7 +88,7 @@ export default function HomeScreen({
       .then(text => {
         setScanningImage(false)
         if (!text) {
-          setScanError('Could not read the image. Make sure the list is clear and well-lit.')
+          setScanError('Could not read the image. Run: ollama pull llava')
           return
         }
         const checklist = detectChecklist(text)
@@ -108,7 +108,7 @@ export default function HomeScreen({
       })
       .catch(() => {
         setScanningImage(false)
-        setScanError('Scanning failed. Make sure Ollama is running with a vision model (llava).')
+        setScanError('Scanning failed. Run: ollama pull llava')
       })
   }, [pendingImage])
 

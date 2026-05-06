@@ -138,21 +138,16 @@ const TIME_CONTEXT = {
 }
 
 export async function parseImageList(base64Image) {
-  const prompt = `Look at this image. Extract any list or task items you can see written or printed on it.
+  const model = import.meta.env.VITE_OLLAMA_VISION_MODEL || 'llava'
+  const prompt = `Extract any list or checklist items from this image.
 Return ONLY a comma-separated string in this exact format: "Title: item1, item2, item3"
-Use the heading/title you see in the image, or create a short descriptive one.
-No explanation. No markdown. Just the comma-separated line.`
+Use the title or heading you see in the image. No explanation. No markdown. Just the one line.`
 
   try {
     const res = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: import.meta.env.VITE_OLLAMA_VISION_MODEL || 'llava',
-        prompt,
-        images: [base64Image],
-        stream: false,
-      }),
+      body: JSON.stringify({ model, prompt, images: [base64Image], stream: false }),
     })
     if (!res.ok) throw new Error(`Ollama error ${res.status}`)
     const data = await res.json()
