@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { parseTask } from '../lib/ai'
+import ProfileAvatar from '../components/ProfileAvatar'
+import ScreenHeader from '../components/ScreenHeader'
 import { CATEGORY_COLORS, formatDueDate } from '../lib/utils'
 
-export default function SpacesScreen({ session, displayName }) {
+export default function SpacesScreen({ session, displayName, onNavigate }) {
   const [spaces, setSpaces] = useState([])
   const [activeSpace, setActiveSpace] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -64,6 +66,7 @@ export default function SpacesScreen({ session, displayName }) {
         space={activeSpace}
         session={session}
         displayName={displayName}
+        onNavigate={onNavigate}
         onBack={() => { setActiveSpace(null); fetchSpaces() }}
       />
     )
@@ -71,22 +74,25 @@ export default function SpacesScreen({ session, displayName }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="flex items-center justify-between px-5 pt-6 pb-4 bg-white border-b border-black/6">
+      <ScreenHeader>
         <div>
           <h1 className="text-slate-900 font-bold text-2xl">Spaces</h1>
           <p className="text-slate-400 text-xs mt-0.5">Collaborate with your team</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="w-9 h-9 rounded-full bg-accent-deep flex items-center justify-center text-white transition-colors active:bg-accent-mid"
-          style={{ boxShadow: '0 4px 12px rgba(26,79,214,0.35)' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </button>
-      </header>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="w-9 h-9 rounded-full bg-accent-deep flex items-center justify-center text-white transition-colors active:bg-accent-mid"
+            style={{ boxShadow: '0 4px 12px rgba(26,79,214,0.35)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
+        </div>
+      </ScreenHeader>
 
       {showCreate && (
         <CreateSpaceModal
@@ -141,7 +147,7 @@ export default function SpacesScreen({ session, displayName }) {
   )
 }
 
-function SpaceBoard({ space, session, displayName, onBack }) {
+function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState(space.space_members || [])
   const [input, setInput] = useState('')
@@ -228,7 +234,7 @@ function SpaceBoard({ space, session, displayName, onBack }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <header className="px-5 pt-6 pb-3">
+      <ScreenHeader className="px-5 pt-6 pb-3">
         <button onClick={onBack} className="text-accent-light text-sm mb-3 flex items-center gap-1">
           <span>←</span> All Spaces
         </button>
@@ -251,8 +257,9 @@ function SpaceBoard({ space, session, displayName, onBack }) {
               )}
             </div>
           </div>
+          <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
         </div>
-      </header>
+      </ScreenHeader>
 
       {/* Filter pill */}
       <div className="px-5 pb-3">
@@ -390,7 +397,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
       <div className="w-full bg-white rounded-t-3xl p-6 border-t border-black/8">
-        <h2 className="text-white font-bold text-lg mb-4">Create a Space</h2>
+        <h2 className="text-slate-900 font-bold text-lg mb-4">Create a Space</h2>
         <input
           type="text"
           value={name}
