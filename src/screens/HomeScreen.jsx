@@ -4,7 +4,7 @@ import AppLogo from '../components/AppLogo'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
-import { parseTask } from '../lib/ai'
+import { parseTask, detectChecklist, encodeChecklist, isChecklist, getChecklistItems } from '../lib/ai'
 import { formatDueDate, getGreeting } from '../lib/utils'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
 
@@ -53,6 +53,13 @@ export default function HomeScreen({
     const trimmed = input.trim()
     if (!trimmed || parsing) return
     setParseError('')
+
+    const checklist = detectChecklist(trimmed)
+    if (checklist) {
+      setParseCard({ raw: trimmed, task: checklist.title, due_date: null, category: 'Personal', assignee: null, checklistItems: checklist.items })
+      return
+    }
+
     setParsing(true)
     setParseCard(null)
     try {
@@ -68,6 +75,7 @@ export default function HomeScreen({
 
   async function handleConfirm() {
     if (!parseCard) return
+    const encodedNotes = parseCard.checklistItems ? encodeChecklist(parseCard.checklistItems) : undefined
     const { data, error } = await supabase.from('tasks').insert({
       user_id: session.user.id,
       content: parseCard.raw,
@@ -75,6 +83,7 @@ export default function HomeScreen({
       due_date: parseCard.due_date || null,
       category: parseCard.category || 'Personal',
       assignee: parseCard.assignee || null,
+      ...(encodedNotes !== undefined ? { notes: encodedNotes } : {}),
     }).select().single()
 
     if (error) {
@@ -88,7 +97,7 @@ export default function HomeScreen({
         due_date: parseCard.due_date || null,
         category: parseCard.category || 'Personal',
         assignee: parseCard.assignee || null,
-        notes: '',
+        notes: encodedNotes || '',
         reminder_minutes: null,
         is_complete: false,
         created_at: new Date().toISOString(),
@@ -199,9 +208,20 @@ export default function HomeScreen({
                       <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
                         {task.task_name}
                       </p>
-                      {task.due_date && (
-                        <p className="text-slate-400 text-xs mt-0.5">{formatDueDate(task.due_date)}</p>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {task.due_date && (
+                          <p className="text-slate-400 text-xs">{formatDueDate(task.due_date)}</p>
+                        )}
+                        {isChecklist(task) && (() => {
+                          const items = getChecklistItems(task) || []
+                          const done = items.filter(it => it.done).length
+                          return (
+                            <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                              ✓ {done}/{items.length}
+                            </span>
+                          )
+                        })()}
+                      </div>
                     </div>
                     <span
                       className="flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
@@ -228,10 +248,43 @@ export default function HomeScreen({
 
             <div className="space-y-2.5 mb-3">
               <EditableRow
-                label="Task"
+                label={parseCard.checklistItems ? 'List Title' : 'Task'}
                 value={parseCard.task}
                 onChange={v => handleEditField('task', v)}
               />
+              {parseCard.checklistItems && (
+                <div>
+                  <p className="text-slate-400 text-[10px] font-semibold mb-2">Items</p>
+                  <div className="space-y-1.5">
+                    {parseCard.checklistItems.map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 group">
+                        <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={item.text}
+                          onChange={e => {
+                            const items = parseCard.checklistItems.map((it, j) => j === i ? { ...it, text: e.target.value } : it)
+                            handleEditField('checklistItems', items)
+                          }}
+                          className="flex-1 bg-transparent text-slate-700 text-xs outline-none border-b border-transparent focus:border-slate-200 pb-0.5"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleEditField('checklistItems', parseCard.checklistItems.filter((_, j) => j !== i))}
+                          className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+                        >✕</button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handleEditField('checklistItems', [...parseCard.checklistItems, { text: '', done: false }])}
+                      className="text-accent-deep text-[11px] font-semibold mt-1 flex items-center gap-1"
+                    >
+                      <span className="text-base leading-none">+</span> Add item
+                    </button>
+                  </div>
+                </div>
+              )}
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-2">Category</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-hide">

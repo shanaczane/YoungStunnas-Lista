@@ -1,3 +1,64 @@
+// ─── Checklist helpers ────────────────────────────────────────────────────────
+export const CHECKLIST_PREFIX = '__checklist__'
+
+export function isChecklist(task) {
+  return task?.notes?.startsWith(CHECKLIST_PREFIX) ?? false
+}
+
+export function getChecklistItems(task) {
+  if (!isChecklist(task)) return null
+  try { return JSON.parse(task.notes.slice(CHECKLIST_PREFIX.length)) } catch { return null }
+}
+
+export function encodeChecklist(items) {
+  return CHECKLIST_PREFIX + JSON.stringify(items)
+}
+
+/**
+ * Returns { title, items } if input looks like a list, otherwise null.
+ * Conservative — requires a colon separator OR 3+ commas to avoid false positives.
+ */
+export function detectChecklist(input) {
+  const commas = (input.match(/,/g) || []).length
+  const hasColon = input.includes(':')
+
+  if (!hasColon && commas < 2) return null
+
+  // Skip plain sentences that happen to have commas (e.g. "call John, it's urgent")
+  // Heuristic: if average segment length > 30 chars it's prose, not a list
+  const segments = input.split(/,|:/).map(s => s.trim()).filter(Boolean)
+  const avgLen = segments.reduce((a, s) => a + s.length, 0) / segments.length
+  if (avgLen > 35) return null
+
+  let title = 'Checklist'
+  let itemsText = input
+
+  // "Title: item1, item2" pattern
+  const colonMatch = input.match(/^([^,\n]{2,50}):\s*(.+)$/s)
+  if (colonMatch) {
+    title = colonMatch[1].trim()
+    itemsText = colonMatch[2]
+  } else if (commas >= 2) {
+    const firstCommaIdx = input.indexOf(',')
+    const firstPart = input.slice(0, firstCommaIdx).trim()
+    // Only treat first segment as title if it has no leading digit (not an item itself)
+    if (!/^\d/.test(firstPart) && firstPart.split(' ').length <= 6) {
+      title = firstPart
+      itemsText = input.slice(firstCommaIdx + 1)
+    }
+  }
+
+  const items = itemsText
+    .split(/,|\s+and\s+/i)
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && s.length < 100)
+
+  if (items.length < 2) return null
+
+  return { title, items: items.map(text => ({ text, done: false })) }
+}
+
+// ─── Ollama / parse ───────────────────────────────────────────────────────────
 const OLLAMA_URL = import.meta.env.VITE_OLLAMA_URL || 'http://localhost:11434'
 const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'llama3.2'
 

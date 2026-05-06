@@ -11,7 +11,7 @@ import {
   updateCategory,
   deleteCategory,
 } from '../lib/categories'
-import { parseTask } from '../lib/ai'
+import { parseTask, isChecklist, getChecklistItems } from '../lib/ai'
 import mascot from '../mascots/home-mascot.png'
 
 const DATE_GROUP_ORDER = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'Done']
@@ -554,13 +554,24 @@ function TaskCard({ task, colors, onToggle, onOpen }) {
         }`}>
           {task.task_name}
         </p>
-        {task.due_date && (
-          <p className={`text-xs mt-0.5 ${
-            getDateGroup(task.due_date) === 'Overdue' && !task.is_complete ? 'text-red-500' : 'text-slate-400'
-          }`}>
-            {formatDueDate(task.due_date)}
-          </p>
-        )}
+        <div className="flex items-center gap-2 mt-0.5">
+          {task.due_date && (
+            <p className={`text-xs ${
+              getDateGroup(task.due_date) === 'Overdue' && !task.is_complete ? 'text-red-500' : 'text-slate-400'
+            }`}>
+              {formatDueDate(task.due_date)}
+            </p>
+          )}
+          {isChecklist(task) && (() => {
+            const items = getChecklistItems(task) || []
+            const done = items.filter(it => it.done).length
+            return (
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                ✓ {done}/{items.length}
+              </span>
+            )
+          })()}
+        </div>
       </button>
     </div>
   )
