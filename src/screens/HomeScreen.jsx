@@ -259,16 +259,13 @@ export default function HomeScreen({
               {parseCard.checklistItems ? (
                 <div className="space-y-2">
                   {/* AI-suggested overall task name */}
-                  <div>
-                    <p className="text-slate-400 text-[10px] font-semibold mb-1">Overall Title</p>
-                    <input
-                      type="text"
-                      value={parseCard.task}
-                      onChange={e => handleEditField('task', e.target.value)}
-                      className="w-full bg-slate-50 text-slate-800 text-sm font-semibold rounded-xl px-3 py-2 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300"
-                      placeholder="e.g. Grocery List"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={parseCard.task}
+                    onChange={e => handleEditField('task', e.target.value)}
+                    className="w-full bg-transparent text-slate-900 text-xl font-bold outline-none border-b-2 border-slate-200 focus:border-accent-deep pb-1.5 transition-colors placeholder:text-slate-300"
+                    placeholder="List title"
+                  />
                   {/* Note card */}
                   <div className="bg-slate-50 border border-black/10 rounded-xl px-4 py-3">
                     <input
