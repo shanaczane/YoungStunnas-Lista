@@ -163,7 +163,7 @@ export default function TasksScreen({
               return (
                 <button key={folder.name} onClick={() => setActiveCategory(folder)} className="w-full bg-white rounded-2xl p-4 card-elevated flex items-center gap-4 transition-all active:scale-[0.99] text-left">
                   <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
-                    <span className="text-white font-bold text-base">{folder.name[0]}</span>
+                    <CategoryIcon name={folder.name} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-900 font-semibold text-base truncate">{folder.name}</p>
@@ -181,7 +181,7 @@ export default function TasksScreen({
               return (
                 <button key={cat.name} onClick={() => setActiveCategory(cat)} className="w-full bg-white/60 rounded-2xl p-4 border border-dashed border-slate-200 flex items-center gap-4 transition-all active:scale-[0.99] text-left">
                   <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 opacity-40" style={{ backgroundColor: colors.border }}>
-                    <span className="text-white font-bold text-base">{cat.name[0]}</span>
+                    <CategoryIcon name={cat.name} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-400 font-semibold text-base truncate">{cat.name}</p>
@@ -266,7 +266,7 @@ export default function TasksScreen({
           </button>
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
-              <span className="text-white font-bold text-lg">{activeCategory.name[0]}</span>
+              <CategoryIcon name={activeCategory.name} />
             </div>
             <div>
               <h1 className="text-slate-900 font-bold text-2xl">{activeCategory.name}</h1>
@@ -415,6 +415,46 @@ function FilterPill({ label, active, color, onClick, onEdit }) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function CategoryIcon({ name }) {
+  const s = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'white', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  if (name === 'School') return (
+    <svg {...s}>
+      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+    </svg>
+  )
+  if (name === 'Work') return (
+    <svg {...s}>
+      <rect x="2" y="7" width="20" height="14" rx="2"/>
+      <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+    </svg>
+  )
+  if (name === 'Personal') return (
+    <svg {...s}>
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+    </svg>
+  )
+  if (name === 'Errands') return (
+    <svg {...s}>
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+  )
+  if (name === 'Health') return (
+    <svg {...s}>
+      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+    </svg>
+  )
+  return (
+    <svg {...s}>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+      <line x1="7" y1="7" x2="7.01" y2="7"/>
+    </svg>
+  )
+}
 
 function TaskCard({ task, colors, onToggle, onOpen }) {
   return (
