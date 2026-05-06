@@ -18,7 +18,7 @@ const TIME_CONTEXT = {
 }
 
 export async function parseTask(input) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date()toLocalISO.split('T')[0]
 
   const prompt = `Today is ${today}. Parse this task input and return ONLY a valid JSON object with exactly these fields:
 {
@@ -66,6 +66,11 @@ Input: "${input.replace(/"/g, "'")}"`
   } catch {
     return fallbackParse(input)
   }
+}
+
+function toLocalISO(date) {
+  const p = n => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:00`
 }
 
 function fallbackParse(input) {
@@ -119,9 +124,9 @@ function fallbackParse(input) {
   let due_date = null
   const now = new Date()
   if (/\btoday\b/.test(lower)) {
-    due_date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes).toISOString()
+    due_date = toLocalISO(new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes))
   } else if (/\btomorrow\b/.test(lower)) {
-    due_date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hours, minutes).toISOString()
+    due_date = toLocalISO(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hours, minutes))
   } else {
     const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
     for (let i = 0; i < days.length; i++) {
@@ -130,7 +135,7 @@ function fallbackParse(input) {
         const diff = (i - now.getDay() + 7) % 7 || 7
         target.setDate(now.getDate() + diff)
         target.setHours(hours, minutes, 0, 0)
-        due_date = target.toISOString()
+        due_date = toLocalISO(target)
         break
       }
     }
