@@ -4,7 +4,7 @@ import AppLogo from '../components/AppLogo'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
-import { parseTask, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput } from '../lib/ai'
+import { parseTask, parseImageList, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput } from '../lib/ai'
 import { formatDueDate } from '../lib/utils'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
 
@@ -22,6 +22,8 @@ export default function HomeScreen({
   onCategoriesChanged,
   focusChat,
   onFocusChatConsumed,
+  pendingImage,
+  onPendingImageConsumed,
 }) {
   const [input, setInput] = useState('')
   const [parsing, setParsing] = useState(false)
@@ -31,6 +33,8 @@ export default function HomeScreen({
   const [newCatInput, setNewCatInput] = useState('')
   const [sortMode, setSortMode] = useState('recent')
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [scanningImage, setScanningImage] = useState(false)
+  const [scanError, setScanError] = useState('')
   const inputRef = useRef(null)
   const itemRefs = useRef([])
 
@@ -71,6 +75,47 @@ export default function HomeScreen({
       onFocusChatConsumed()
     }
   }, [focusChat, onFocusChatConsumed])
+
+  useEffect(() => {
+    if (!pendingImage) return
+    onPendingImageConsumed()
+    setParseCard(null)
+    setScanError('')
+    setScanningImage(true)
+    parseImageList(pendingImage)
+      .then(text => {
+        setScanningImage(false)
+        if (!text) {
+          setScanError('Could not read the image. Run: ollama pull llava')
+          return
+        }
+        const checklist = detectChecklist(text)
+        if (checklist) {
+          setParseCard({
+            raw: text,
+            task: suggestListTitle(checklist.title, checklist.items),
+            checklistTitle: checklist.title,
+            due_date: null,
+            category: 'Personal',
+            assignee: null,
+            checklistItems: checklist.items,
+          })
+        } else {
+          setParseCard({
+            raw: text,
+            task: text,
+            due_date: null,
+            category: 'Personal',
+            assignee: null,
+            notes: text,
+          })
+        }
+      })
+      .catch(() => {
+        setScanningImage(false)
+        setScanError('Scanning failed. Run: ollama pull llava')
+      })
+  }, [pendingImage])
 
   async function handleSend() {
     const trimmed = input.trim()
@@ -170,6 +215,23 @@ export default function HomeScreen({
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
+
+      {/* Scanning overlay */}
+      {scanningImage && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+          <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+          <p className="text-white font-semibold text-base">Reading your list…</p>
+        </div>
+      )}
+
+      {/* Scan error toast */}
+      {scanError && (
+        <div className="fixed top-4 left-4 right-4 z-50 bg-red-500 text-white text-sm font-medium px-4 py-3 rounded-2xl shadow-lg flex items-center justify-between">
+          <span>{scanError}</span>
+          <button onClick={() => setScanError('')} className="ml-3 text-white/80 hover:text-white text-lg leading-none">✕</button>
+        </div>
+      )}
+
       {/* Top bar */}
       <ScreenHeader>
         <div className="flex items-center gap-3">

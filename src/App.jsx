@@ -17,6 +17,7 @@ export default function App() {
   const [categories, setCategories] = useState([])
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [focusChat, setFocusChat] = useState(false)
+  const [pendingImage, setPendingImage] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -94,6 +95,16 @@ export default function App() {
     if (opts.focusChat) setFocusChat(true)
   }
 
+  function handleImageCapture(file) {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const base64 = e.target.result.split(',')[1]
+      setPendingImage(base64)
+      setScreen('home')
+    }
+    reader.readAsDataURL(file)
+  }
+
   if (session === undefined) {
     return (
       <div className="min-h-screen bg-app-bg flex items-center justify-center">
@@ -126,6 +137,8 @@ export default function App() {
             onCategoriesChanged={() => loadCategories(session.user.id)}
             focusChat={focusChat}
             onFocusChatConsumed={() => setFocusChat(false)}
+            pendingImage={pendingImage}
+            onPendingImageConsumed={() => setPendingImage(null)}
           />
         )}
         {screen === 'tasks' && (
@@ -168,6 +181,7 @@ export default function App() {
         active={screen}
         onNavigate={tab => navigateTo(tab)}
         onAddTask={() => navigateTo('home', { focusChat: true })}
+        onImageCapture={handleImageCapture}
       />
 
       {selectedTask && (
