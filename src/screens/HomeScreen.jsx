@@ -73,34 +73,43 @@ export default function HomeScreen({
     }
   }, [focusChat, onFocusChatConsumed])
 
+  const [scanningImage, setScanningImage] = useState(false)
+  const [scanError, setScanError] = useState('')
+
   useEffect(() => {
     if (!pendingImage) return
     onPendingImageConsumed()
-    setParseError('')
-    setParsing(true)
     setParseCard(null)
-    parseImageList(pendingImage).then(text => {
-      if (!text) {
-        setParseError('Could not read the image — try again with better lighting.')
-        setParsing(false)
-        return
-      }
-      const checklist = detectChecklist(text)
-      if (checklist) {
-        setParseCard({
-          raw: text,
-          task: suggestListTitle(checklist.title, checklist.items),
-          checklistTitle: checklist.title,
-          due_date: null,
-          category: 'Personal',
-          assignee: null,
-          checklistItems: checklist.items,
-        })
-      } else {
-        setParseCard({ raw: text, task: text, due_date: null, category: 'Personal', assignee: null, notes: text })
-      }
-      setParsing(false)
-    })
+    setParseError('')
+    setScanError('')
+    setScanningImage(true)
+
+    parseImageList(pendingImage)
+      .then(text => {
+        setScanningImage(false)
+        if (!text) {
+          setScanError('Could not read the image. Make sure the list is clear and well-lit.')
+          return
+        }
+        const checklist = detectChecklist(text)
+        if (checklist) {
+          setParseCard({
+            raw: text,
+            task: suggestListTitle(checklist.title, checklist.items),
+            checklistTitle: checklist.title,
+            due_date: null,
+            category: 'Personal',
+            assignee: null,
+            checklistItems: checklist.items,
+          })
+        } else {
+          setParseCard({ raw: text, task: text, due_date: null, category: 'Personal', assignee: null, notes: cleanInput(text) })
+        }
+      })
+      .catch(() => {
+        setScanningImage(false)
+        setScanError('Scanning failed. Make sure Ollama is running with a vision model (llava).')
+      })
   }, [pendingImage])
 
   async function handleSend() {
@@ -336,6 +345,22 @@ export default function HomeScreen({
           </>
         )}
       </div>
+
+      {/* Image scanning overlay */}
+      {scanningImage && (
+        <div className="fixed inset-0 z-30 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm gap-4">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin" />
+          <p className="text-white font-semibold text-base">Reading your list…</p>
+        </div>
+      )}
+
+      {/* Scan error toast */}
+      {scanError && !scanningImage && (
+        <div className="fixed top-20 left-4 right-4 z-30 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+          <p className="text-red-500 text-sm font-medium flex-1">{scanError}</p>
+          <button onClick={() => setScanError('')} className="text-red-300 hover:text-red-500 ml-3 text-lg leading-none">✕</button>
+        </div>
+      )}
 
       {/* Bottom fixed area: parse card + chat input stacked */}
       <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
