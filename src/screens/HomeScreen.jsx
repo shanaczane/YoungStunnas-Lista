@@ -29,6 +29,7 @@ export default function HomeScreen({
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
   const [sortMode, setSortMode] = useState('recent')
+  const [showSortMenu, setShowSortMenu] = useState(false)
   const inputRef = useRef(null)
   const itemRefs = useRef([])
 
@@ -219,15 +220,40 @@ export default function HomeScreen({
               <div className="flex items-center justify-between mb-3">
                 <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Tasks</p>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSortMode(m => SORT_MODES[(SORT_MODES.indexOf(m) + 1) % SORT_MODES.length])}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-accent-deep bg-accent-pale px-2.5 py-1 rounded-full"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 6h18M7 12h10M11 18h2"/>
-                    </svg>
-                    {SORT_LABELS[sortMode]}
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowSortMenu(v => !v)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${showSortMenu || sortMode !== 'recent' ? 'bg-accent-deep text-white' : 'bg-slate-100 text-slate-400 hover:text-accent-deep'}`}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18M7 12h10M11 18h2"/>
+                      </svg>
+                    </button>
+                    {showSortMenu && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
+                        <div className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-xl border border-black/8 overflow-hidden min-w-[160px]">
+                          {SORT_MODES.map(mode => (
+                            <button
+                              key={mode}
+                              onClick={() => { setSortMode(mode); setShowSortMenu(false) }}
+                              className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left transition-colors ${
+                                sortMode === mode ? 'bg-accent-pale text-accent-deep font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                              }`}
+                            >
+                              {sortMode === mode && (
+                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                  <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                              {sortMode !== mode && <span className="w-2.5" />}
+                              {SORT_LABELS[mode]}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                   {tasks.length > 5 && (
                     <button onClick={() => onNavigate('tasks')} className="text-accent-deep text-xs font-semibold">
                       View all →
