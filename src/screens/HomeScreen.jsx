@@ -5,7 +5,7 @@ import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
 import { parseTask, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput } from '../lib/ai'
-import { formatDueDate, getGreeting } from '../lib/utils'
+import { formatDueDate } from '../lib/utils'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
@@ -175,7 +175,7 @@ export default function HomeScreen({
         <div className="flex items-center gap-3">
           <AppLogo size="md" />
           <div>
-            <p className="text-slate-400 text-xs leading-none mb-0.5">{getGreeting()},</p>
+            <p className="text-slate-400 text-xs leading-none mb-0.5">Welcome back,</p>
             <h1 className="text-slate-900 font-bold text-lg leading-tight">{displayName.split(' ')[0]}</h1>
           </div>
         </div>
