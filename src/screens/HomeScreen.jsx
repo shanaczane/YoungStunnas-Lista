@@ -220,9 +220,9 @@ export default function HomeScreen({
                         {task.task_name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {task.due_date && (
-                          <p className="text-slate-400 text-xs">{formatDueDate(task.due_date)}</p>
-                        )}
+                        <p className="text-slate-400 text-xs">
+                          {task.due_date ? formatDueDate(task.due_date) : 'No due date'}
+                        </p>
                         {isChecklist(task) && (() => {
                           const items = getChecklistItems(task) || []
                           const done = items.filter(it => it.done).length
