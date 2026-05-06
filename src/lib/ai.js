@@ -139,9 +139,11 @@ const TIME_CONTEXT = {
 
 export async function parseImageList(base64Image) {
   const model = import.meta.env.VITE_OLLAMA_VISION_MODEL || 'llava'
-  const prompt = `Extract any list or checklist items from this image.
-Return ONLY a comma-separated string in this exact format: "Title: item1, item2, item3"
-Use the title or heading you see in the image. No explanation. No markdown. Just the one line.`
+  const prompt = `Look at this image carefully. It shows a list with a title and several items.
+Read ALL the text visible — the heading/title AND every item listed below it.
+Return ONLY one line in this exact format: Title: item1, item2, item3, item4
+Example: Things to buy: 2 pencil, 3 eraser, 4 notebooks, 2 ballpens
+No explanation. No bullet points. No extra lines. Just the single comma-separated line.`
 
   try {
     const res = await fetch(`${OLLAMA_URL}/api/generate`, {
@@ -151,10 +153,30 @@ Use the title or heading you see in the image. No explanation. No markdown. Just
     })
     if (!res.ok) throw new Error(`Ollama error ${res.status}`)
     const data = await res.json()
-    return data.response?.trim() || null
+    const raw = data.response?.trim() || null
+    if (!raw) return null
+    return normalizeImageResponse(raw)
   } catch {
     return null
   }
+}
+
+function normalizeImageResponse(text) {
+  // Strip surrounding quotes
+  text = text.replace(/^["']|["']$/g, '').trim()
+
+  // If already in "Title: item, item" format, return as-is
+  if (text.includes(':') && text.includes(',')) return text
+
+  // Handle newline-separated response: first line = title, rest = items
+  const lines = text.split(/\n/).map(l => l.replace(/^[-•*\d.)\s]+/, '').trim()).filter(Boolean)
+  if (lines.length >= 2) {
+    const title = lines[0].replace(/:$/, '').trim()
+    const items = lines.slice(1).join(', ')
+    return `${title}: ${items}`
+  }
+
+  return text
 }
 
 export async function parseTask(input) {
