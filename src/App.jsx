@@ -123,6 +123,7 @@ export default function App() {
             onTaskCreated={handleTaskCreated}
             onNavigate={navigateTo}
             onOpenTask={openTask}
+            onCategoriesChanged={() => loadCategories(session.user.id)}
             focusChat={focusChat}
             onFocusChatConsumed={() => setFocusChat(false)}
           />

@@ -6,7 +6,9 @@ import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
 import { parseTask } from '../lib/ai'
 import { formatDueDate, getGreeting } from '../lib/utils'
-import { BUILT_IN_CATEGORIES, getCategoryColor } from '../lib/categories'
+import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
+
+const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
 export default function HomeScreen({
   session,
@@ -16,6 +18,7 @@ export default function HomeScreen({
   onTaskCreated,
   onNavigate,
   onOpenTask,
+  onCategoriesChanged,
   focusChat,
   onFocusChatConsumed,
 }) {
@@ -23,6 +26,8 @@ export default function HomeScreen({
   const [parsing, setParsing] = useState(false)
   const [parseCard, setParseCard] = useState(null)
   const [parseError, setParseError] = useState('')
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [newCatInput, setNewCatInput] = useState('')
   const inputRef = useRef(null)
 
   const today = new Date()
@@ -101,6 +106,19 @@ export default function HomeScreen({
     setParseCard(prev => ({ ...prev, [field]: value }))
   }
 
+  async function handleAddCategory() {
+    const name = newCatInput.trim()
+    if (!name) return
+    const color = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]
+    const { error } = await createCategory(session.user.id, { name, color, emoji: '📁' })
+    if (!error) {
+      handleEditField('category', name)
+      onCategoriesChanged?.()
+    }
+    setAddingCategory(false)
+    setNewCatInput('')
+  }
+
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -130,13 +148,13 @@ export default function HomeScreen({
         </div>
       </ScreenHeader>
 
-      <div className="flex-1 overflow-y-auto pb-40">
+      <div className="flex-1 overflow-y-auto pb-52">
         {tasks.length === 0 ? (
           <EmptyHome />
         ) : (
           <>
             {upcoming.length > 0 && (
-              <section className="px-5 pt-5 mb-5">
+              <section className="px-5 pt-6 mb-6">
                 <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Due Soon</p>
                 <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
                   {upcoming.map(task => (
@@ -157,7 +175,7 @@ export default function HomeScreen({
               </section>
             )}
 
-            <section className="px-5">
+            <section className="px-5 pt-2">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Tasks</p>
                 {tasks.length > 5 && (
@@ -215,8 +233,8 @@ export default function HomeScreen({
                 onChange={v => handleEditField('task', v)}
               />
               <div>
-                <p className="text-slate-400 text-[10px] font-semibold mb-1.5">Category</p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+                <p className="text-slate-400 text-[10px] font-semibold mb-2">Category</p>
+                <div className="flex gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-hide">
                   {[...BUILT_IN_CATEGORIES, ...categories].map(cat => {
                     const isSelected = (parseCard.category || 'Personal') === cat.name
                     const catColors  = getCategoryColor(cat.name, categories)
@@ -226,9 +244,9 @@ export default function HomeScreen({
                         type="button"
                         onClick={() => handleEditField('category', cat.name)}
                         className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
-                          isSelected ? 'ring-2 ring-offset-1 scale-105' : 'opacity-55 hover:opacity-80'
+                          isSelected ? 'ring-2 ring-inset' : 'opacity-55 hover:opacity-80'
                         }`}
-                        style={{ backgroundColor: catColors.bg, color: catColors.text }}
+                        style={{ backgroundColor: catColors.bg, color: catColors.text, ...(isSelected ? { boxShadow: `0 0 0 2px ${catColors.border}` } : {}) }}
                       >
                         <span>{cat.emoji || '📁'}</span>
                         <span>{cat.name}</span>
@@ -240,7 +258,45 @@ export default function HomeScreen({
                       </button>
                     )
                   })}
+
+                  {/* Add category button */}
+                  {!addingCategory && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingCategory(true)}
+                      className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+                    >
+                      +
+                    </button>
+                  )}
                 </div>
+
+                {addingCategory && (
+                  <div className="flex gap-1.5 items-center mt-2 animate-slide-up">
+                    <input
+                      type="text"
+                      value={newCatInput}
+                      onChange={e => setNewCatInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
+                      placeholder="New category name..."
+                      className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleAddCategory}
+                      disabled={!newCatInput.trim()}
+                      className="px-2.5 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => { setAddingCategory(false); setNewCatInput('') }}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-1">Due Date</p>
