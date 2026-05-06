@@ -178,7 +178,13 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
 
           {checklistItems ? (
             <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
-              <p className="text-slate-900 font-bold text-base mb-3">{taskName}</p>
+              <input
+                type="text"
+                value={taskName}
+                onChange={e => setTaskName(e.target.value)}
+                className="w-full bg-transparent text-slate-900 font-bold text-base outline-none border-b border-transparent focus:border-slate-200 pb-0.5 mb-3 transition-colors placeholder:text-slate-300"
+                placeholder="List title"
+              />
               <div className="space-y-2.5">
                 {checklistItems.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 group">
