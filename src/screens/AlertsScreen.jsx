@@ -39,14 +39,6 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
           </>
         )}
 
-        <section className="bg-white rounded-2xl p-4 card-elevated">
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">How Reminders Work</p>
-          <div className="space-y-3">
-            <Tip icon="💬" text="Type a task with a date — Lista sets the reminder automatically." />
-            <Tip icon="✏️" text="Tap any task to set a custom reminder time (15 min, 1 hour, 1 day before)." />
-            <Tip icon="🔔" text="Install Lista as a PWA to receive push notifications on your device." />
-          </div>
-        </section>
       </div>
     </div>
   )
@@ -96,14 +88,6 @@ function ReminderRow({ task, onOpenTask }) {
   )
 }
 
-function Tip({ icon, text }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <span className="text-base flex-shrink-0">{icon}</span>
-      <p className="text-slate-400 text-xs leading-relaxed">{text}</p>
-    </div>
-  )
-}
 
 function EmptyReminders() {
   return (
