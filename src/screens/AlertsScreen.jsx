@@ -1,6 +1,7 @@
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import { CATEGORY_COLORS, formatDueDate, getDateGroup } from '../lib/utils'
+import mascot from '../mascots/home-mascot.png'
 
 export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate }) {
   const upcoming = tasks
@@ -107,7 +108,7 @@ function Tip({ icon, text }) {
 function EmptyReminders() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-      <img src="/mascots/reminders.png" alt="Ollie" className="w-32 h-32 object-contain mb-2" />
+      <img src={mascot} alt="Ollie" className="w-32 h-32 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
       <p className="text-slate-400 text-sm">No upcoming reminders</p>
       <p className="text-slate-300 text-xs mt-1">Tasks with due dates will appear here</p>
     </div>

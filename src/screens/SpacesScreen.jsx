@@ -4,6 +4,7 @@ import { parseTask } from '../lib/ai'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import { CATEGORY_COLORS, formatDueDate } from '../lib/utils'
+import mascot from '../mascots/home-mascot.png'
 
 export default function SpacesScreen({ session, displayName, onNavigate }) {
   const [spaces, setSpaces] = useState([])
@@ -425,7 +426,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
 function EmptySpaces({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-      <img src="/mascots/spaces.png" alt="Ollie" className="w-36 h-36 object-contain mb-2" />
+      <img src={mascot} alt="Ollie" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
       <p className="text-slate-500 text-sm mb-1">No spaces yet</p>
       <p className="text-slate-300 text-xs mb-5">Create a space to collaborate with your team</p>
       <button
