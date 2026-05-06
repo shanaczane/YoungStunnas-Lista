@@ -80,15 +80,70 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
             </div>
           )}
 
-          <div className="mb-4">
+          <div className="mb-3">
             <input
               type="text"
               value={taskName}
               onChange={e => setTaskName(e.target.value)}
-              className="w-full bg-transparent text-slate-900 text-xl font-semibold outline-none border-b border-slate-200 focus:border-accent-deep pb-2 transition-colors"
+              className="w-full bg-transparent text-slate-900 text-xl font-bold outline-none border-b-2 border-slate-200 focus:border-accent-deep pb-2 transition-colors"
               placeholder="Task name"
             />
           </div>
+
+          {checklistItems ? (
+            <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
+              <p className="text-slate-900 font-bold text-base mb-3">{taskName}</p>
+              <div className="space-y-2.5">
+                {checklistItems.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 group">
+                    <button
+                      type="button"
+                      onClick={() => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, done: !it.done } : it))}
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        item.done ? 'bg-accent-deep border-accent-deep' : 'border-slate-300'
+                      }`}
+                    >
+                      {item.done && (
+                        <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                          <path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                    <input
+                      type="text"
+                      value={item.text}
+                      onChange={e => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, text: e.target.value } : it))}
+                      placeholder={`Item ${i + 1}`}
+                      className={`flex-1 bg-transparent text-sm outline-none placeholder:text-slate-300 ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setChecklistItems(prev => prev.filter((_, j) => j !== i))}
+                      className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    >✕</button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setChecklistItems(prev => [...prev, { text: '', done: false }])}
+                  className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors pt-1"
+                >
+                  <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
+                  <span className="text-sm">Add item</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4">
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Add a note..."
+                rows={3}
+                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
+              />
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="text-slate-400 text-xs font-medium block mb-1.5">Category</label>
@@ -174,62 +229,6 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
               className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
             />
           </div>
-
-          {checklistItems ? (
-            <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
-              <p className="text-slate-900 font-bold text-base mb-3">{taskName}</p>
-              <div className="space-y-2.5">
-                {checklistItems.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 group">
-                    <button
-                      type="button"
-                      onClick={() => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, done: !it.done } : it))}
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                        item.done ? 'bg-accent-deep border-accent-deep' : 'border-slate-300'
-                      }`}
-                    >
-                      {item.done && (
-                        <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
-                          <path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </button>
-                    <input
-                      type="text"
-                      value={item.text}
-                      onChange={e => setChecklistItems(prev => prev.map((it, j) => j === i ? { ...it, text: e.target.value } : it))}
-                      placeholder={`Item ${i + 1}`}
-                      className={`flex-1 bg-transparent text-sm outline-none placeholder:text-slate-300 ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setChecklistItems(prev => prev.filter((_, j) => j !== i))}
-                      className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                    >✕</button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setChecklistItems(prev => [...prev, { text: '', done: false }])}
-                  className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors pt-1"
-                >
-                  <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
-                  <span className="text-sm">Add item</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="mb-4">
-              <label className="text-slate-400 text-xs font-medium block mb-1.5">Notes</label>
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Add notes..."
-                rows={3}
-                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
-              />
-            </div>
-          )}
 
           <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-black/10">
             <div className="flex items-center justify-between">
