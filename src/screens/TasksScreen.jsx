@@ -306,7 +306,6 @@ export default function TasksScreen({
       due_date:  parseCard.due_date || null,
       category:  parseCard.category || activeCategory?.name || 'Personal',
       assignee:  parseCard.assignee || null,
-      ...(parseCard.notes ? { notes: parseCard.notes } : {}),
     }).select().single()
     if (!error && data) onTaskCreated?.(data)
     else if (error) {
@@ -423,21 +422,15 @@ export default function TasksScreen({
             </div>
             <div className="space-y-2.5 mb-3">
               {/* Task name */}
-              <input
-                type="text"
-                value={parseCard.task}
-                onChange={e => handleEditCatField('task', e.target.value)}
-                className="w-full bg-transparent text-slate-900 text-xl font-bold outline-none border-b-2 border-slate-200 focus:border-accent-deep pb-1.5 transition-colors placeholder:text-slate-300"
-                placeholder="Task name"
-              />
-              {/* Notes */}
-              <textarea
-                value={parseCard.notes || ''}
-                onChange={e => handleEditCatField('notes', e.target.value)}
-                placeholder="Add a note..."
-                rows={2}
-                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
-              />
+              <div>
+                <p className="text-slate-400 text-[10px] font-semibold mb-1">Task</p>
+                <input
+                  type="text"
+                  value={parseCard.task}
+                  onChange={e => handleEditCatField('task', e.target.value)}
+                  className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2 outline-none border border-black/10 focus:border-accent-deep"
+                />
+              </div>
               {/* Category pills */}
               <div>
                 <p className="text-slate-400 text-[10px] font-semibold mb-1.5">Category</p>
