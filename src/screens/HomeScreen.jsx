@@ -171,7 +171,7 @@ export default function HomeScreen({
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       {/* Top bar */}
-      <ScreenHeader>
+      <ScreenHeader className="flex items-center justify-between px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <div className="flex items-center gap-3">
           <AppLogo size="md" />
           <div>
@@ -208,7 +208,7 @@ export default function HomeScreen({
                       <button
                         key={task.id}
                         onClick={() => onOpenTask(task.id)}
-                        className="shrink-0 bg-white rounded-2xl text-left min-w-37 card-elevated transition-all active:scale-95 overflow-hidden flex items-stretch"
+                        className="shrink-0 bg-card-bg rounded-2xl text-left min-w-37 card-elevated transition-all active:scale-95 overflow-hidden flex items-stretch"
                       >
                         <div className="w-1 shrink-0" style={{ backgroundColor: catColors?.border }} />
                         <div className="px-3 py-3">
@@ -239,7 +239,7 @@ export default function HomeScreen({
                     {showSortMenu && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
-                        <div className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-xl border border-black/8 overflow-hidden min-w-[160px]">
+                        <div className="absolute right-0 top-9 z-20 bg-card-bg rounded-2xl shadow-xl border border-divider overflow-hidden min-w-[160px]">
                           {SORT_MODES.map(mode => (
                             <button
                               key={mode}
@@ -275,7 +275,7 @@ export default function HomeScreen({
                     <button
                       key={task.id}
                       onClick={() => onOpenTask(task.id)}
-                      className="w-full bg-white rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] text-left overflow-hidden"
+                      className="w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] text-left overflow-hidden"
                     >
                       <div
                         className="w-1 self-stretch shrink-0"
@@ -311,7 +311,7 @@ export default function HomeScreen({
       {/* Bottom fixed area: parse card + chat input stacked */}
       <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
-          <div className="bg-white rounded-2xl p-4 card-elevated-lg animate-slide-up">
+          <div className="bg-card-bg rounded-2xl p-4 card-elevated-lg animate-slide-up">
             <div className="flex items-center justify-between mb-3">
               <span className="text-accent-deep text-[10px] font-bold uppercase tracking-widest">AI Parsed</span>
               {parseError && <p className="text-amber-500 text-[10px]">{parseError}</p>}
@@ -503,7 +503,7 @@ export default function HomeScreen({
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 card-elevated">
+        <div className="flex items-center gap-2 bg-card-bg rounded-2xl px-4 py-3 card-elevated">
           <input
             ref={inputRef}
             type="text"
@@ -560,7 +560,7 @@ function EditableRow({ label, value, onChange }) {
 function EmptyHome() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] px-8 text-center">
-      <img src={homeMascot} alt="Lista" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
+      <img src={homeMascot} alt="Lista" className="w-36 h-36 object-contain mb-2" />
       <p className="text-slate-800 font-semibold text-lg">Type your first task</p>
       <p className="text-slate-400 text-sm mt-2 leading-relaxed">
         Just type naturally below — Lista will organize it for you automatically.

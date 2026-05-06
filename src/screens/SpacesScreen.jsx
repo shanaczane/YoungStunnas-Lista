@@ -76,7 +76,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <ScreenHeader>
+      <ScreenHeader className="flex items-center justify-between px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <div>
           <h1 className="text-slate-900 font-bold text-2xl">Spaces</h1>
           <p className="text-slate-400 text-xs mt-0.5">Collaborate with your team</p>
@@ -116,7 +116,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
               <button
                 key={space.id}
                 onClick={() => setActiveSpace(space)}
-                className="w-full bg-card-bg rounded-2xl p-4 border border-black/8 hover:border-accent-light/30 transition-colors text-left"
+                className="w-full bg-card-bg rounded-2xl p-4 border border-divider hover:border-accent-light/30 transition-colors text-left"
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-white font-semibold">{space.name}</p>
@@ -237,7 +237,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <ScreenHeader className="px-5 pt-6 pb-3">
+      <ScreenHeader className="px-5 pt-6 pb-3 bg-card-bg border-b border-divider">
         <button onClick={onBack} className="text-accent-light text-sm mb-3 flex items-center gap-1">
           <span>←</span> All Spaces
         </button>
@@ -321,7 +321,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => setParseCard(null)}
-                className="flex-1 py-2 rounded-xl border border-black/10 text-slate-500 text-sm"
+                className="flex-1 py-2 rounded-xl border border-divider text-slate-500 text-sm"
               >
                 Cancel
               </button>
@@ -335,7 +335,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate }) {
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-white border border-black/10 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 bg-card-bg border border-divider rounded-2xl px-4 py-3 shadow-sm">
           <input
             ref={inputRef}
             type="text"
@@ -399,7 +399,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
   const [name, setName] = useState('')
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
-      <div className="w-full bg-white rounded-t-3xl p-6 border-t border-black/8">
+      <div className="w-full bg-card-bg rounded-t-3xl p-6 border-t border-divider">
         <h2 className="text-slate-900 font-bold text-lg mb-4">Create a Space</h2>
         <input
           type="text"
@@ -407,11 +407,11 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
           onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onConfirm(name.trim()) }}
           placeholder="Space name (e.g. Sprint 3, Study Group)"
-          className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300 mb-4"
+          className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-divider focus:border-accent-deep placeholder:text-slate-300 mb-4"
           autoFocus
         />
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm">Cancel</button>
+          <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-divider text-slate-500 text-sm">Cancel</button>
           <button
             onClick={() => name.trim() && onConfirm(name.trim())}
             disabled={!name.trim()}
@@ -428,7 +428,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
 function EmptySpaces({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-      <img src={mascot} alt="Ollie" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
+      <img src={mascot} alt="Ollie" className="w-36 h-36 object-contain mb-2" />
       <p className="text-slate-500 text-sm mb-1">No spaces yet</p>
       <p className="text-slate-300 text-xs mb-5">Create a space to collaborate with your team</p>
       <button
