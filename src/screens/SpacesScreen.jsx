@@ -49,17 +49,44 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
   const [editingSpace, setEditingSpace] = useState(null)
   const [spacePreviews, setSpacePreviews] = useState({})
   const [spaceTimestamps, setSpaceTimestamps] = useState({})
+  const [invites, setInvites] = useState([])
   const [pinnedIds, setPinnedIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem(PINNED_KEY) || '[]') }
     catch { return [] }
   })
   const pendingSpaceId = useRef(sessionStorage.getItem(ACTIVE_SPACE_KEY))
+  const myCode = session.user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
 
   useEffect(() => {
     localStorage.setItem(PINNED_KEY, JSON.stringify(pinnedIds))
   }, [pinnedIds])
 
-  useEffect(() => { fetchSpaces() }, [session.user.id])
+  useEffect(() => { fetchSpaces(); fetchInvites() }, [session.user.id])
+
+  async function fetchInvites() {
+    const { data } = await supabase
+      .from('space_invites')
+      .select('*')
+      .eq('user_code', myCode)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    if (data) setInvites(data)
+  }
+
+  async function handleAcceptInvite(invite) {
+    const already = await supabase.from('space_members').select('user_id').eq('space_id', invite.space_id).eq('user_id', session.user.id).maybeSingle()
+    if (!already.data) {
+      await supabase.from('space_members').insert({ space_id: invite.space_id, user_id: session.user.id, display_name: displayName })
+    }
+    await supabase.from('space_invites').update({ status: 'accepted' }).eq('id', invite.id)
+    setInvites(prev => prev.filter(i => i.id !== invite.id))
+    fetchSpaces()
+  }
+
+  async function handleDeclineInvite(invite) {
+    await supabase.from('space_invites').update({ status: 'declined' }).eq('id', invite.id)
+    setInvites(prev => prev.filter(i => i.id !== invite.id))
+  }
 
   // Restore active space after spaces load (session restore OR invite join)
   useEffect(() => {
@@ -206,6 +233,7 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
         <SpaceSettingsModal
           space={editingSpace}
           session={session}
+          displayName={displayName}
           onSave={async updates => {
             await supabase.from('spaces').update(updates).eq('id', editingSpace.id)
             setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, ...updates } : s))
@@ -217,13 +245,41 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
       )}
 
       <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4">
+        {/* Pending invites */}
+        {invites.length > 0 && (
+          <div className="flex flex-col gap-2.5 mb-4">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Pending Invites</p>
+            {invites.map(invite => (
+              <div key={invite.id} className="rounded-2xl bg-accent-pale border border-accent-light/40 px-4 py-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent-deep/10 flex items-center justify-center text-accent-deep font-bold text-lg flex-shrink-0">
+                  {(invite.space_name || '?')[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-900 font-bold text-sm truncate">{invite.space_name}</p>
+                  <p className="text-slate-500 text-xs">{invite.invited_by_name} invited you</p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleDeclineInvite(invite)}
+                    className="px-3 py-1.5 rounded-xl border border-black/10 text-slate-500 text-xs font-semibold"
+                  >Decline</button>
+                  <button
+                    onClick={() => handleAcceptInvite(invite)}
+                    className="px-3 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold"
+                  >Join</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center pt-20">
             <div className="w-6 h-6 border-2 border-accent-light border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : spaces.length === 0 ? (
+        ) : spaces.length === 0 && invites.length === 0 ? (
           <EmptySpaces onCreate={() => setShowCreate(true)} />
-        ) : (
+        ) : spaces.length === 0 ? null : (
           <div className="flex flex-col gap-3">
             {sorted.map(space => {
               const spaceColor = space.color || '#818CF8'
@@ -810,7 +866,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 
       {showSettings && (
         <SpaceSettingsModal
-          space={spaceData} session={session}
+          space={spaceData} session={session} displayName={displayName}
           onSave={handleSpaceSave}
           onDelete={handleSpaceDelete}
           onClose={() => { setShowSettings(false); fetchMembers() }}
@@ -1192,14 +1248,15 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
 }
 
 // ── Space settings modal ──────────────────────────────────────────────────────
-function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMemberClick }) {
+function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onClose, onMemberClick }) {
   const [name, setName] = useState(space.name || '')
   const [description, setDescription] = useState(space.description || '')
   const [color, setColor] = useState(space.color || null)
   const [members, setMembers] = useState(space.space_members || [])
-  const [addMode, setAddMode] = useState('email') // 'email' | 'username'
+  const [addMode, setAddMode] = useState('email') // 'email' | 'userid'
   const [memberInput, setMemberInput] = useState('')
   const [memberError, setMemberError] = useState('')
+  const [memberSuccess, setMemberSuccess] = useState('')
   const [addingMember, setAddingMember] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmRemoveId, setConfirmRemoveId] = useState(null)
@@ -1233,43 +1290,24 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
       if (!error) { setMembers(prev => [...prev, { user_id: newId, display_name: displayName }]); setMemberInput('') }
       else setMemberError('Could not add member')
     } else {
-      // User ID mode: LISTA-XXXXXXXX → first 8 chars of UUID (no dashes)
-      const clean = val.replace(/^LISTA-?/i, '').trim()
+      // User ID mode: send invite — they'll see it on their Spaces page
+      const clean = val.replace(/^LISTA-?/i, '').trim().toUpperCase()
       if (clean.length < 6) { setMemberError('Invalid User ID — format: LISTA-XXXXXXXX'); setAddingMember(false); return }
-
-      // Try profiles table first (registered on login)
-      let foundId = null, foundName = null
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .ilike('user_code', `${clean}%`)
-        .maybeSingle()
-      if (profile) { foundId = profile.id; foundName = profile.display_name }
-
-      // Fallback: match UUID prefix in space_members
-      if (!foundId) {
-        const { data: sm } = await supabase
-          .from('space_members')
-          .select('user_id, display_name')
-          .ilike('user_id', `${clean.toLowerCase()}%`)
-          .limit(1)
-          .maybeSingle()
-        if (sm) { foundId = sm.user_id; foundName = sm.display_name }
-      }
-
-      if (!foundId) {
-        setMemberError('User not found. Ask them to open Lista once so their profile is registered.')
-        setAddingMember(false); return
-      }
-      if (members.some(m => m.user_id === foundId)) {
-        setMemberError('This user is already a member')
-        setAddingMember(false); return
-      }
-      const { error } = await supabase.from('space_members').insert({
-        space_id: space.id, user_id: foundId, display_name: foundName,
+      const senderName = displayName || session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'Someone'
+      const { error } = await supabase.from('space_invites').insert({
+        space_id: space.id,
+        space_name: space.name,
+        invited_by_name: senderName,
+        user_code: clean,
+        status: 'pending',
       })
-      if (!error) { setMembers(prev => [...prev, { user_id: foundId, display_name: foundName }]); setMemberInput('') }
-      else setMemberError('Could not add member')
+      if (!error) {
+        setMemberInput('')
+        setMemberSuccess('Invite sent! They\'ll see it when they open Lista.')
+        setTimeout(() => setMemberSuccess(''), 3000)
+      } else {
+        setMemberError('Could not send invite. Make sure the space_invites table exists in Supabase.')
+      }
     }
     setAddingMember(false)
   }
@@ -1442,6 +1480,7 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
               </button>
             </div>
             {memberError && <p className="text-red-500 text-xs mt-1.5">{memberError}</p>}
+            {memberSuccess && <p className="text-green-600 text-xs mt-1.5">{memberSuccess}</p>}
           </div>
 
           <div className="border-t border-slate-100 pt-4">
