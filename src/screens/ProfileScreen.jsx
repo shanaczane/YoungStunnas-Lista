@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import ScreenHeader from '../components/ScreenHeader'
+import { getFriends, removeFriend, sendFriendRequest } from '../lib/social'
 
 const THEMES = [
   { id: 'system', label: 'System Default' },
@@ -10,11 +11,13 @@ const THEMES = [
 
 const CATEGORIES = ['School', 'Work', 'Personal', 'Errands', 'Health']
 
-export default function ProfileScreen({ session, displayName, tasks, onBack, onSignOut, theme, onSelectTheme }) {
+export default function ProfileScreen({ session, displayName, tasks, onBack, onSignOut, theme, onSelectTheme, onSocialChanged }) {
   const [editing, setEditing]           = useState(false)
   const [nameInput, setNameInput]       = useState(displayName)
   const [saving, setSaving]             = useState(false)
   const [saveMsg, setSaveMsg]           = useState('')
+  const [friendEmail, setFriendEmail]   = useState('')
+  const [friendMsg, setFriendMsg]       = useState('')
   const [avatarUrl, setAvatarUrl]       = useState(session?.user?.user_metadata?.avatar_url || null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -39,6 +42,26 @@ export default function ProfileScreen({ session, displayName, tasks, onBack, onS
     cat,
     count: tasks.filter(t => t.category === cat).length,
   })).filter(x => x.count > 0)
+  const friends = getFriends(email)
+
+  function handleAddFriend() {
+    const result = sendFriendRequest({
+      fromEmail: email,
+      fromName: displayName,
+      toEmail: friendEmail,
+    })
+    setFriendMsg(result.error || 'Friend request sent.')
+    if (result.ok) {
+      setFriendEmail('')
+      onSocialChanged?.()
+    }
+    setTimeout(() => setFriendMsg(''), 3000)
+  }
+
+  function handleRemoveFriend(friend) {
+    removeFriend(email, friend.email)
+    onSocialChanged?.()
+  }
 
   async function handleSaveName() {
     const trimmed = nameInput.trim()
@@ -282,6 +305,52 @@ async function handleSignOut() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Friends */}
+        <div className="mx-5 mt-4">
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Friends</p>
+          <div className="bg-card-bg rounded-2xl card-elevated p-4">
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={friendEmail}
+                onChange={e => setFriendEmail(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddFriend() }}
+                placeholder="Friend email"
+                className="flex-1 min-w-0 bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep"
+              />
+              <button
+                onClick={handleAddFriend}
+                disabled={!friendEmail.trim()}
+                className="px-3 py-2.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40"
+              >
+                Add
+              </button>
+            </div>
+            {friendMsg && <p className="text-accent-deep text-xs mt-2 font-medium">{friendMsg}</p>}
+
+            <div className="mt-3 space-y-2">
+              {friends.length === 0 ? (
+                <p className="text-slate-400 text-xs">Accepted friends will appear here.</p>
+              ) : (
+                friends.map(friend => (
+                  <div key={friend.email} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-slate-800 text-sm font-semibold truncate">{friend.displayName}</p>
+                      <p className="text-slate-400 text-xs truncate">{friend.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveFriend(friend)}
+                      className="shrink-0 text-red-500 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Settings */}

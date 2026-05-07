@@ -2,9 +2,13 @@ import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import { formatDueDate, getDateGroup } from '../lib/utils'
 import { getCategoryColor } from '../lib/categories'
+import { getPendingFriendRequests, getPendingTaskShares, respondToFriendRequest, respondToTaskShare } from '../lib/social'
 import mascot from '../mascots/home-mascot.png'
 
-export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate }) {
+export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate, onSocialChanged, onAcceptSharedTask }) {
+  const email = session?.user?.email || ''
+  const friendRequests = getPendingFriendRequests(email)
+  const taskShares = getPendingTaskShares(email)
   const upcoming = tasks
     .filter(t => !t.is_complete && t.due_date)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
@@ -12,19 +16,65 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
   const overdue = upcoming.filter(t => getDateGroup(t.due_date) === 'Overdue')
   const today   = upcoming.filter(t => getDateGroup(t.due_date) === 'Today')
   const later   = upcoming.filter(t => !['Overdue', 'Today'].includes(getDateGroup(t.due_date)))
+  const actionCount = friendRequests.length + taskShares.length
+
+  async function handleFriendResponse(requestId, accept) {
+    respondToFriendRequest(requestId, accept)
+    onSocialChanged?.()
+  }
+
+  async function handleShareResponse(share, accept) {
+    if (accept) {
+      const result = onAcceptSharedTask ? await onAcceptSharedTask(share) : { error: true }
+      const { error } = result
+      if (error) return
+    }
+    respondToTaskShare(share.id, accept)
+    onSocialChanged?.()
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       <ScreenHeader className="flex items-center justify-between px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <div>
           <h1 className="text-slate-900 font-bold text-2xl">Reminders</h1>
-          <p className="text-slate-400 text-xs mt-0.5">{upcoming.length} upcoming</p>
+          <p className="text-slate-400 text-xs mt-0.5">{upcoming.length} upcoming{actionCount ? ` - ${actionCount} request${actionCount !== 1 ? 's' : ''}` : ''}</p>
         </div>
         <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
       </ScreenHeader>
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4 space-y-6">
-        {upcoming.length === 0 ? (
+        {actionCount > 0 && (
+          <section>
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-3 text-accent-deep">Requests</p>
+            <div className="space-y-2.5">
+              {friendRequests.map(request => (
+                <RequestCard
+                  key={request.id}
+                  title={`${request.fromName || request.fromEmail} added you`}
+                  detail={request.fromEmail}
+                  acceptLabel="Add friend"
+                  declineLabel="Remove"
+                  onAccept={() => handleFriendResponse(request.id, true)}
+                  onDecline={() => handleFriendResponse(request.id, false)}
+                />
+              ))}
+              {taskShares.map(share => (
+                <RequestCard
+                  key={share.id}
+                  title={`${share.fromName || share.fromEmail} shared a list`}
+                  detail={share.task.task_name}
+                  acceptLabel="Add to tasks"
+                  declineLabel="Dismiss"
+                  onAccept={() => handleShareResponse(share, true)}
+                  onDecline={() => handleShareResponse(share, false)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {upcoming.length === 0 && actionCount === 0 ? (
           <EmptyReminders />
         ) : (
           <>
@@ -40,6 +90,31 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
           </>
         )}
 
+      </div>
+    </div>
+  )
+}
+
+function RequestCard({ title, detail, acceptLabel, declineLabel, onAccept, onDecline }) {
+  return (
+    <div className="w-full bg-card-bg rounded-2xl card-elevated overflow-hidden">
+      <div className="px-4 py-3.5">
+        <p className="text-slate-800 text-sm font-semibold leading-tight">{title}</p>
+        <p className="text-slate-400 text-xs mt-0.5 truncate">{detail}</p>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={onAccept}
+            className="flex-1 rounded-xl bg-accent-deep text-white text-xs font-bold py-2.5"
+          >
+            {acceptLabel}
+          </button>
+          <button
+            onClick={onDecline}
+            className="flex-1 rounded-xl bg-slate-100 text-slate-500 text-xs font-bold py-2.5"
+          >
+            {declineLabel}
+          </button>
+        </div>
       </div>
     </div>
   )

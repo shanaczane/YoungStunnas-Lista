@@ -9,6 +9,7 @@ import ProfileScreen from './screens/ProfileScreen'
 import TaskDetailModal from './screens/TaskDetailModal'
 import BottomNav from './components/BottomNav'
 import { fetchCategories } from './lib/categories'
+import { shareTaskWithFriend } from './lib/social'
 
 export default function App() {
   const [session, setSession] = useState(undefined)
@@ -18,6 +19,7 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [focusChat, setFocusChat] = useState(false)
   const [pendingImage, setPendingImage] = useState(null)
+  const [, setSocialVersion] = useState(0)
   const [theme, setTheme] = useState(() => localStorage.getItem('lista-theme') || 'system')
 
   useEffect(() => {
@@ -104,6 +106,38 @@ export default function App() {
     setSelectedTaskId(null)
   }
 
+  function handleSocialChanged() {
+    setSocialVersion(v => v + 1)
+  }
+
+  function handleShareTask(task, friendEmail) {
+    const result = shareTaskWithFriend({
+      fromEmail: session.user.email,
+      fromName: displayName,
+      toEmail: friendEmail,
+      task,
+    })
+    if (result.ok) handleSocialChanged()
+    return result
+  }
+
+  async function handleAcceptSharedTask(share) {
+    const { data, error } = await supabase.from('tasks').insert({
+      user_id: session.user.id,
+      space_id: null,
+      content: share.task.content || `Shared by ${share.fromName || share.fromEmail}`,
+      task_name: share.task.task_name,
+      category: share.task.category || 'Personal',
+      due_date: share.task.due_date || null,
+      notes: share.task.notes || null,
+      reminder_minutes: share.task.reminder_minutes ?? null,
+      is_complete: false,
+    }).select().single()
+
+    if (data) handleTaskCreated(data)
+    return { data, error }
+  }
+
   function openTask(id) {
     setSelectedTaskId(id)
   }
@@ -187,6 +221,8 @@ export default function App() {
             displayName={displayName}
             onOpenTask={openTask}
             onNavigate={navigateTo}
+            onSocialChanged={handleSocialChanged}
+            onAcceptSharedTask={handleAcceptSharedTask}
           />
         )}
         {screen === 'profile' && (
@@ -197,6 +233,7 @@ export default function App() {
             theme={theme}
             onSelectTheme={setTheme}
             onBack={() => setScreen('home')}
+            onSocialChanged={handleSocialChanged}
           />
         )}
       </div>
@@ -217,6 +254,7 @@ export default function App() {
           onClose={closeTask}
           onUpdate={handleTaskUpdated}
           onDelete={handleTaskDeleted}
+          onShareTask={handleShareTask}
           onCategoriesChanged={() => loadCategories(session.user.id)}
         />
       )}

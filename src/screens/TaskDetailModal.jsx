@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
 import { CategoryIcon } from '../lib/icons'
 import { isChecklist, getChecklistItems, getChecklistTitle, encodeChecklist } from '../lib/ai'
+import { getFriends } from '../lib/social'
 
 const REMINDER_PRESETS = [
   { label: '15 min', value: 15 },
@@ -17,7 +18,7 @@ function minutesToCustom(m) {
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
-export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
+export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, onDelete, onShareTask, categories = [], onCategoriesChanged, session }) {
   const [taskName, setTaskName] = useState(task.task_name)
   const [category, setCategory] = useState(task.category || 'Personal')
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
@@ -33,6 +34,8 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
   const [customUnit, setCustomUnit] = useState(initCustom.unit)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [selectedFriend, setSelectedFriend] = useState('')
+  const [shareMsg, setShareMsg] = useState('')
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
   const [visible, setVisible] = useState(false)
@@ -131,6 +134,22 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
     ...BUILT_IN_CATEGORIES.filter(b => usedNames.has(b.name) || b.name === category),
     ...categories,
   ]
+  const friends = getFriends(session?.user?.email)
+
+  function handleShare() {
+    const result = onShareTask?.({
+      ...task,
+      task_name: taskName,
+      category,
+      due_date: dueDate ? new Date(dueDate).toISOString() : null,
+      notes: checklistItems ? encodeChecklist(checklistItems, checklistTitle) : notes,
+      reminder_minutes: reminderEnabled ? reminderMinutes : null,
+    }, selectedFriend)
+
+    setShareMsg(result?.error || 'Shared to reminders.')
+    if (result?.ok) setSelectedFriend('')
+    setTimeout(() => setShareMsg(''), 3000)
+  }
 
   return (
     <div
@@ -413,6 +432,42 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
             )}
           </div>
 
+          <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-divider">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-slate-800 text-sm font-medium">Share list</p>
+                <p className="text-slate-400 text-xs mt-0.5">Send a copy to a friend&apos;s reminders.</p>
+              </div>
+              <ShareIcon />
+            </div>
+            {friends.length > 0 ? (
+              <div className="flex gap-2 mt-3">
+                <select
+                  value={selectedFriend}
+                  onChange={e => setSelectedFriend(e.target.value)}
+                  className="flex-1 min-w-0 bg-white text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep"
+                >
+                  <option value="">Choose friend</option>
+                  {friends.map(friend => (
+                    <option key={friend.email} value={friend.email}>
+                      {friend.displayName} ({friend.email})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleShare}
+                  disabled={!selectedFriend}
+                  className="px-3 py-2.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40"
+                >
+                  Share
+                </button>
+              </div>
+            ) : (
+              <p className="text-slate-400 text-xs mt-3">Add a friend from Profile first.</p>
+            )}
+            {shareMsg && <p className="text-accent-deep text-xs mt-2 font-medium">{shareMsg}</p>}
+          </div>
+
           {isDirty && (
             <button
               onClick={handleSave}
@@ -440,5 +495,17 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
         </div>
       </div>
     </div>
+  )
+}
+
+function ShareIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-accent-deep shrink-0 mt-0.5">
+      <circle cx="18" cy="5" r="3"/>
+      <circle cx="6" cy="12" r="3"/>
+      <circle cx="18" cy="19" r="3"/>
+      <path d="M8.6 10.7l6.8-4.4"/>
+      <path d="M8.6 13.3l6.8 4.4"/>
+    </svg>
   )
 }
