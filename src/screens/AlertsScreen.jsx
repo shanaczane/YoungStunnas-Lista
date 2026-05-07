@@ -20,7 +20,7 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
   const [readIds, setReadIds] = useState(getReadIds)
 
   const upcoming = tasks
-    .filter(t => !t.is_complete && t.due_date)
+    .filter(t => !t.is_complete && t.due_date && t.reminder_minutes != null)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 
   const overdue = upcoming.filter(t => getDateGroup(t.due_date) === 'Overdue')
@@ -49,7 +49,7 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
           <div>
             <h1 className="text-slate-900 font-bold text-2xl">Alerts</h1>
             <p className="text-slate-400 text-xs mt-0.5">
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+              {unreadCount > 0 ? `${unreadCount} unread` : upcoming.length > 0 ? 'All caught up' : 'No reminders set'}
             </p>
           </div>
           <div className="flex items-center gap-3 pt-1">
@@ -147,8 +147,8 @@ function EmptyAlerts() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-5 pt-16">
       <img src={mascot} alt="Ollie" className="w-32 h-32 object-contain mb-2" />
-      <p className="text-slate-400 text-sm">No upcoming reminders</p>
-      <p className="text-slate-300 text-xs mt-1">Tasks with due dates will appear here</p>
+      <p className="text-slate-400 text-sm">No reminders set</p>
+      <p className="text-slate-300 text-xs mt-1">Open any task, set a due date, and enable "Remind me before due"</p>
     </div>
   )
 }

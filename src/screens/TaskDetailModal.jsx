@@ -347,14 +347,18 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
 
           <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-divider">
             <div className="flex items-center justify-between">
-              <p className="text-slate-800 text-sm font-medium">Remind me before due</p>
+              <p className={`text-sm font-medium ${dueDate ? 'text-slate-800' : 'text-slate-400'}`}>Remind me before due</p>
               <button
-                onClick={() => setReminderEnabled(v => !v)}
-                className={`w-11 h-6 rounded-full transition-colors ${reminderEnabled ? 'bg-accent-deep' : 'bg-slate-200'}`}
+                onClick={() => dueDate && setReminderEnabled(v => !v)}
+                disabled={!dueDate}
+                className={`w-11 h-6 rounded-full transition-colors ${reminderEnabled && dueDate ? 'bg-accent-deep' : 'bg-slate-200'} ${!dueDate ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full mx-1 transition-transform shadow-sm ${reminderEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                <div className={`w-4 h-4 bg-white rounded-full mx-1 transition-transform shadow-sm ${reminderEnabled && dueDate ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
+            {!dueDate && (
+              <p className="text-slate-400 text-xs mt-1.5">Set a due date above to enable reminders</p>
+            )}
             {reminderEnabled && (
               <div className="mt-3">
                 <div className="flex gap-2">
@@ -372,7 +376,12 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
                     </button>
                   ))}
                   <button
-                    onClick={() => setCustomMode(true)}
+                    onClick={() => {
+                      const c = minutesToCustom(reminderMinutes)
+                      setCustomValue(c.value)
+                      setCustomUnit(c.unit)
+                      setCustomMode(true)
+                    }}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       customMode
                         ? 'bg-accent-deep text-white'
