@@ -18,6 +18,11 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [focusChat, setFocusChat] = useState(false)
   const [pendingImage, setPendingImage] = useState(null)
+  const [pendingJoinId, setPendingJoinId] = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('join')
+    if (p) window.history.replaceState({}, '', window.location.pathname)
+    return p || null
+  })
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('lista-theme')
     return saved === 'dark' ? 'dark' : 'light'
@@ -71,10 +76,21 @@ export default function App() {
 
   useEffect(() => {
     if (!session?.user) return
+    const dn = session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User'
     // Auto-register user in profiles so others can find them by User ID
     const userCode = session.user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
-    const dn = session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User'
     supabase.from('profiles').upsert({ id: session.user.id, display_name: dn, user_code: userCode }, { onConflict: 'id' })
+    // Handle invite link join
+    if (pendingJoinId) {
+      supabase.from('space_members')
+        .select('user_id').eq('space_id', pendingJoinId).eq('user_id', session.user.id).maybeSingle()
+        .then(({ data: existing }) => {
+          if (!existing) {
+            return supabase.from('space_members').insert({ space_id: pendingJoinId, user_id: session.user.id, display_name: dn })
+          }
+        })
+        .then(() => { setPendingJoinId(null); setScreen('spaces') })
+    }
     fetchTasks(session.user.id)
     loadCategories(session.user.id)
 
@@ -192,7 +208,7 @@ export default function App() {
           />
         )}
         {screen === 'spaces' && (
-          <SpacesScreen session={session} displayName={displayName} onNavigate={navigateTo} />
+          <SpacesScreen session={session} displayName={displayName} onNavigate={navigateTo} openSpaceId={pendingJoinId} />
         )}
         {screen === 'notifications' && (
           <AlertsScreen

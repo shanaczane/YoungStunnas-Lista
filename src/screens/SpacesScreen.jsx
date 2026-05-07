@@ -41,7 +41,7 @@ function formatActivityTime(date) {
 // ── Spaces list ───────────────────────────────────────────────────────────────
 const ACTIVE_SPACE_KEY = 'lista_active_space'
 
-export default function SpacesScreen({ session, displayName, onNavigate }) {
+export default function SpacesScreen({ session, displayName, onNavigate, openSpaceId }) {
   const [spaces, setSpaces] = useState([])
   const [activeSpace, setActiveSpace] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -61,10 +61,12 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
 
   useEffect(() => { fetchSpaces() }, [session.user.id])
 
-  // Restore active space after spaces load (only if not explicitly closed)
+  // Restore active space after spaces load (session restore OR invite join)
   useEffect(() => {
-    if (pendingSpaceId.current && spaces.length > 0 && !activeSpace) {
-      const found = spaces.find(s => s.id === pendingSpaceId.current)
+    if (spaces.length === 0 || activeSpace) return
+    const targetId = openSpaceId || pendingSpaceId.current
+    if (targetId) {
+      const found = spaces.find(s => s.id === targetId)
       if (found) {
         pendingSpaceId.current = null
         setActiveSpace(found)
