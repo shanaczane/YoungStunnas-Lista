@@ -7,7 +7,19 @@ import { formatDueDate } from '../lib/utils'
 import { getCategoryColor } from '../lib/categories'
 import mascot from '../mascots/home-mascot.png'
 
-const SPACE_COLORS = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#0EA5E9']
+// Space theme colors — pastel only, applied to UI backgrounds/accents (NOT member identity)
+const SPACE_COLORS = ['#A5B4FC','#C4B5FD','#F9A8D4','#FCD34D','#6EE7B7','#FCA5A5','#67E8F9','#7DD3FC']
+
+// Member identity colors — fixed palette, never driven by theme
+const IDENTITY_COLORS = ['#6366F1','#EC4899','#10B981','#F59E0B','#06B6D4','#8B5CF6','#EF4444','#0EA5E9','#14B8A6','#F97316']
+
+// Deterministic identity color per member name — never changes regardless of theme
+function memberColor(name = '') {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return IDENTITY_COLORS[Math.abs(hash) % IDENTITY_COLORS.length]
+}
+
 const CATEGORIES = ['Work','Personal','School','Errands','Health']
 const PINNED_KEY = 'lista_pinned_spaces'
 
@@ -54,7 +66,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
 
   async function handleCreateSpace({ name, description, color }) {
     const { data, error } = await supabase
-      .from('spaces').insert({ name, owner_id: session.user.id }).select().single()
+      .from('spaces').insert({ name, description, color, owner_id: session.user.id }).select().single()
     if (!error && data) {
       await supabase.from('space_members').insert({ space_id: data.id, user_id: session.user.id, display_name: displayName })
       const created = { ...data, description, color, space_members: [{ user_id: session.user.id, display_name: displayName }] }
@@ -82,6 +94,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
         onNavigate={onNavigate}
         onBack={() => { setActiveSpace(null); fetchSpaces() }}
         onSpaceDeleted={() => { setActiveSpace(null); fetchSpaces() }}
+        onSpaceUpdated={updates => setSpaces(prev => prev.map(s => s.id === activeSpace.id ? { ...s, ...updates } : s))}
       />
     )
   }
@@ -96,12 +109,13 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreate(true)}
-            className="w-9 h-9 rounded-full bg-accent-deep flex items-center justify-center text-white transition-colors active:bg-accent-mid"
-            style={{ boxShadow: '0 4px 12px rgba(10,46,92,0.35)' }}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-black/15 text-slate-700 text-xs font-semibold transition-colors active:bg-slate-50"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
+            Create Space
           </button>
           <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
         </div>
@@ -137,7 +151,8 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
               const isPinned = pinnedIds.includes(space.id)
               const memberCount = (space.space_members || []).length
               const shownMembers = (space.space_members || []).slice(0, 4)
-              const spaceColor = space.color || '#6366F1'
+              const spaceColor = space.color || '#818CF8'
+              const cardBg = space.color ? space.color + '18' : '#ffffff'
               return (
                 <div key={space.id}>
                   {isPinned && (
@@ -148,7 +163,8 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
                   )}
                   <button
                     onClick={() => setActiveSpace(space)}
-                    className={`w-full bg-card-bg rounded-2xl p-4 card-elevated flex items-center gap-3 text-left transition-all active:scale-[0.99] ${isPinned ? 'ring-1 ring-accent-deep/20' : ''}`}
+                    className={`w-full rounded-2xl p-4 card-elevated flex items-center gap-3 text-left transition-all active:scale-[0.99] ${isPinned ? 'ring-1 ring-accent-deep/20' : ''}`}
+                    style={{ backgroundColor: cardBg }}
                   >
                     <div
                       className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold flex-shrink-0"
@@ -167,13 +183,14 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
                       <div className="flex items-center gap-2 mt-1.5">
                         <div className="flex -space-x-1.5">
                           {shownMembers.map((m, i) => (
-                            <div key={i} className="w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-white text-[8px] font-bold"
-                              style={{ backgroundColor: spaceColor }}>
+                            <div key={i} className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
+                              style={{ backgroundColor: memberColor(m.display_name || ''), outline: `2px solid ${cardBg}` }}>
                               {(m.display_name || '?')[0].toUpperCase()}
                             </div>
                           ))}
                           {memberCount > 4 && (
-                            <div className="w-5 h-5 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-slate-500 text-[7px] font-bold">
+                            <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-[7px] font-bold"
+                              style={{ outline: `2px solid ${cardBg}` }}>
                               +{memberCount - 4}
                             </div>
                           )}
@@ -209,7 +226,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
 }
 
 // ── Space Board ───────────────────────────────────────────────────────────────
-function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDeleted }) {
+function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDeleted, onSpaceUpdated }) {
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState(space.space_members || [])
   const [spaceData, setSpaceData] = useState(space)
@@ -229,6 +246,16 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
   const [modifications, setModifications] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`lista_mods_${space.id}`) || '{}') }
     catch { return {} }
+  })
+  const [viewMode, setViewMode] = useState('list')
+  const [inProgressIds, setInProgressIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(`lista_kanban_${space.id}`) || '[]')) }
+    catch { return new Set() }
+  })
+  const [showDetails, setShowDetails] = useState(false)
+  const [moveLog, setMoveLog] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`lista_moves_${space.id}`) || '[]') }
+    catch { return [] }
   })
   const inputRef = useRef(null)
 
@@ -302,6 +329,51 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
     await supabase.from('tasks').update({ is_complete: updated }).eq('id', task.id)
   }
 
+  function handleStatusChange(task, newStatus) {
+    setInProgressIds(prev => {
+      const next = new Set(prev)
+      if (newStatus === 'inprogress') {
+        next.add(task.id)
+        if (task.is_complete) handleToggle(task)
+      } else if (newStatus === 'todo') {
+        next.delete(task.id)
+        if (task.is_complete) handleToggle(task)
+      } else if (newStatus === 'done') {
+        next.delete(task.id)
+        if (!task.is_complete) handleToggle(task)
+      }
+      localStorage.setItem(`lista_kanban_${space.id}`, JSON.stringify([...next]))
+      return next
+    })
+  }
+
+  function handleLogMove(task, fromColId, toColId) {
+    const fromCol = KANBAN_COLS.find(c => c.id === fromColId)
+    const toCol   = KANBAN_COLS.find(c => c.id === toColId)
+    const entry = {
+      taskId: task.id,
+      taskName: task.task_name,
+      from: fromColId,
+      to: toColId,
+      fromLabel: fromCol?.label || fromColId,
+      toLabel: toCol?.label || toColId,
+      by: displayName,
+      at: new Date().toISOString(),
+    }
+    setMoveLog(prev => {
+      const next = [entry, ...prev].slice(0, 100)
+      localStorage.setItem(`lista_moves_${space.id}`, JSON.stringify(next))
+      return next
+    })
+  }
+
+  function handleDrop(task, toColId) {
+    const fromColId = task.is_complete ? 'done' : inProgressIds.has(task.id) ? 'inprogress' : 'todo'
+    if (fromColId === toColId) return
+    handleStatusChange(task, toColId)
+    handleLogMove(task, fromColId, toColId)
+  }
+
   async function handleTaskUpdate(taskId, updates) {
     const oldTask = tasks.find(t => t.id === taskId)
     const { data } = await supabase.from('tasks').update(updates).eq('id', taskId).select().single()
@@ -342,6 +414,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
   async function handleSpaceSave(updates) {
     await supabase.from('spaces').update(updates).eq('id', spaceData.id)
     setSpaceData(prev => ({ ...prev, ...updates }))
+    onSpaceUpdated?.(updates)
     setShowSettings(false)
   }
 
@@ -381,10 +454,12 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
     : null
 
   const activeFilterCount = [statusFilter !== 'all', !!categoryFilter, !!memberFilter, sortBy !== 'created', groupByMember].filter(Boolean).length
-  const spaceColor = spaceData.color || '#6366F1'
+  const spaceColor = spaceData.color || '#818CF8'
+  const boardBg = spaceData.color ? spaceData.color + '18' : undefined
 
   return (
-    <div className="flex flex-col min-h-screen bg-app-bg">
+    <div className={`flex flex-col min-h-screen ${!spaceData.color ? 'bg-app-bg' : ''}`}
+      style={boardBg ? { backgroundColor: boardBg } : undefined}>
       <ScreenHeader className="px-5 pt-6 pb-3">
         <button onClick={onBack} className="flex items-center gap-1 text-accent-deep text-sm font-medium mb-3">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -407,7 +482,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
                   {members.slice(0, 5).map((m, i) => (
                     <button key={i} onClick={() => openMemberProfile(m.display_name)}
                       className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold border-2 border-app-bg transition-transform active:scale-90"
-                      style={{ backgroundColor: spaceColor }}>
+                      style={{ backgroundColor: memberColor(m.display_name || '') }}>
                       {(m.display_name || '?')[0].toUpperCase()}
                     </button>
                   ))}
@@ -417,6 +492,15 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => setShowDetails(true)}
+              className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+              title="Space Details"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+              </svg>
+            </button>
             <button
               onClick={() => setShowActivity(v => !v)}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${showActivity ? 'bg-accent-pale text-accent-deep' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
@@ -461,6 +545,18 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             </svg>
             By Member
           </button>
+          <div className="flex items-center gap-1 bg-slate-100/80 rounded-full p-1">
+            {[
+              { id: 'list',   label: 'List',   icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+              { id: 'kanban', label: 'Kanban', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="5" height="18" rx="1"/></svg> },
+              { id: 'table',  label: 'Table',  icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg> },
+            ].map(v => (
+              <button key={v.id} onClick={() => setViewMode(v.id)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${viewMode === v.id ? 'bg-white text-accent-deep shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                {v.icon}{v.label}
+              </button>
+            ))}
+          </div>
           <div className="flex-1" />
           <span className="text-slate-300 text-xs">{displayed.length} task{displayed.length !== 1 ? 's' : ''}</span>
         </div>
@@ -529,51 +625,82 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
       )}
       </div>
 
-      {/* Task list */}
-      <div className="flex-1 overflow-y-auto px-5 pb-44 space-y-2.5">
-        {displayed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[25vh] text-center">
-            <p className="text-slate-400 text-sm font-medium">No tasks</p>
-            <p className="text-slate-300 text-xs mt-1">
-              {activeFilterCount > 0 ? 'Try adjusting your filters' : 'Type below to add one for the team'}
-            </p>
-          </div>
-        ) : grouped ? (
-          Object.entries(grouped).map(([member, memberTasks]) => (
-            <div key={member} className="space-y-2">
-              <div className="flex items-center gap-2 px-1 pt-1">
-                <button onClick={() => openMemberProfile(member)}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 transition-transform active:scale-90"
-                  style={{ backgroundColor: spaceColor }}>
-                  {member[0].toUpperCase()}
-                </button>
-                <span className="text-slate-600 text-xs font-bold">{member}</span>
-                <span className="text-slate-300 text-xs">· {memberTasks.length}</span>
-              </div>
-              {memberTasks.map(task => (
-                <SpaceTaskCard
-                  key={task.id} task={task} members={members} spaceColor={spaceColor}
-                  onToggle={() => handleToggle(task)} onClick={() => setEditingTask(task)}
-                  onMemberClick={openMemberProfile}
-                />
-              ))}
+      {/* Task list / Kanban / Table */}
+      {viewMode === 'kanban' ? (
+        <div className="flex-1 overflow-x-auto overflow-y-auto pb-44 pt-2">
+          <KanbanView
+            tasks={displayed}
+            members={members}
+            spaceColor={spaceColor}
+            themeColor={spaceData.color}
+            inProgressIds={inProgressIds}
+            onToggle={handleToggle}
+            onClick={task => setEditingTask(task)}
+            onMemberClick={openMemberProfile}
+            onStatusChange={handleStatusChange}
+            onDrop={handleDrop}
+          />
+        </div>
+      ) : viewMode === 'table' ? (
+        <div className="flex-1 overflow-auto pb-44">
+          <TableView
+            tasks={displayed}
+            members={members}
+            themeColor={spaceData.color}
+            inProgressIds={inProgressIds}
+            modifications={modifications}
+            onToggle={handleToggle}
+            onClick={task => setEditingTask(task)}
+            onMemberClick={openMemberProfile}
+            onStatusChange={handleStatusChange}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto px-5 pb-44 space-y-2.5">
+          {displayed.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[25vh] text-center">
+              <p className="text-slate-400 text-sm font-medium">No tasks</p>
+              <p className="text-slate-300 text-xs mt-1">
+                {activeFilterCount > 0 ? 'Try adjusting your filters' : 'Type below to add one for the team'}
+              </p>
             </div>
-          ))
-        ) : (
-          displayed.map(task => (
-            <SpaceTaskCard
-              key={task.id} task={task} members={members} spaceColor={spaceColor}
-              onToggle={() => handleToggle(task)} onClick={() => setEditingTask(task)}
-              onMemberClick={openMemberProfile}
-            />
-          ))
-        )}
-      </div>
+          ) : grouped ? (
+            Object.entries(grouped).map(([member, memberTasks]) => (
+              <div key={member} className="space-y-2">
+                <div className="flex items-center gap-2 px-1 pt-1">
+                  <button onClick={() => openMemberProfile(member)}
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 transition-transform active:scale-90"
+                    style={{ backgroundColor: memberColor(member) }}>
+                    {member[0].toUpperCase()}
+                  </button>
+                  <span className="text-slate-600 text-xs font-bold">{member}</span>
+                  <span className="text-slate-300 text-xs">· {memberTasks.length}</span>
+                </div>
+                {memberTasks.map(task => (
+                  <SpaceTaskCard
+                    key={task.id} task={task} members={members} spaceColor={spaceColor} themeColor={spaceData.color}
+                    onToggle={() => handleToggle(task)} onClick={() => setEditingTask(task)}
+                    onMemberClick={openMemberProfile}
+                  />
+                ))}
+              </div>
+            ))
+          ) : (
+            displayed.map(task => (
+              <SpaceTaskCard
+                key={task.id} task={task} members={members} spaceColor={spaceColor} themeColor={spaceData.color}
+                onToggle={() => handleToggle(task)} onClick={() => setEditingTask(task)}
+                onMemberClick={openMemberProfile}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       {/* Bottom input */}
       <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
-          <div className="bg-card-bg rounded-2xl p-4 card-elevated-lg">
+          <div className="rounded-2xl p-4 card-elevated-lg" style={{ backgroundColor: spaceData.color ? spaceData.color + '28' : '#ffffff' }}>
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">AI Parsed · Space Task</p>
             <p className="text-slate-800 text-sm font-semibold">{parseCard.task}</p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -592,7 +719,8 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 bg-card-bg border border-black/10 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 border border-black/10 rounded-2xl px-4 py-3 shadow-sm"
+          style={{ backgroundColor: spaceData.color ? spaceData.color + '28' : '#ffffff' }}>
           <input
             ref={inputRef} type="text" value={input}
             onChange={e => setInput(e.target.value)}
@@ -633,8 +761,15 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
       {showActivity && (
         <ActivityDrawer
           tasks={tasks} members={members} spaceColor={spaceColor}
+          moveLog={moveLog}
           onClose={() => setShowActivity(false)}
           onMemberClick={openMemberProfile}
+        />
+      )}
+      {showDetails && (
+        <SpaceDetailsModal
+          tasks={tasks} members={members} spaceColor={spaceColor}
+          onClose={() => setShowDetails(false)}
         />
       )}
       {selectedMember && (
@@ -653,7 +788,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 }
 
 // ── Task card ─────────────────────────────────────────────────────────────────
-function SpaceTaskCard({ task, members, spaceColor, onToggle, onClick, onMemberClick }) {
+function SpaceTaskCard({ task, members, spaceColor, themeColor, onToggle, onClick, onMemberClick }) {
   const colors = getCategoryColor(task.category)
   const creator = members.find(m => m.user_id === task.user_id)
   const creatorName = creator?.display_name || null
@@ -666,7 +801,8 @@ function SpaceTaskCard({ task, members, spaceColor, onToggle, onClick, onMemberC
 
   return (
     <div
-      className="bg-card-bg rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99] cursor-pointer"
+      className="rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99] cursor-pointer"
+      style={{ backgroundColor: themeColor ? themeColor + '28' : '#ffffff' }}
       onClick={onClick}
     >
       <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: colors.border }} />
@@ -701,13 +837,14 @@ function SpaceTaskCard({ task, members, spaceColor, onToggle, onClick, onMemberC
           {effectiveAssignee && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(effectiveAssignee) }}
               className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white transition-transform active:scale-90"
-              style={{ backgroundColor: spaceColor }}>
+              style={{ backgroundColor: memberColor(effectiveAssignee) }}>
               {effectiveAssignee[0].toUpperCase()}
             </button>
           )}
           {creatorName && !sameAsCreator && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
-              className={`w-6 h-6 rounded-full bg-slate-300 flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}>
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}
+              style={{ backgroundColor: memberColor(creatorName) }}>
               {creatorName[0].toUpperCase()}
             </button>
           )}
@@ -816,7 +953,7 @@ function SpaceTaskModal({ task, members, onSave, onDelete, onClose, onMemberClic
                       {ev.person ? (
                         <button onClick={() => onMemberClick?.(ev.person)}
                           className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 transition-transform active:scale-90"
-                          style={{ backgroundColor: ev.color }}>
+                          style={{ backgroundColor: memberColor(ev.person) }}>
                           {ev.person[0].toUpperCase()}
                         </button>
                       ) : (
@@ -862,7 +999,7 @@ function SpaceTaskModal({ task, members, onSave, onDelete, onClose, onMemberClic
 function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMemberClick }) {
   const [name, setName] = useState(space.name || '')
   const [description, setDescription] = useState(space.description || '')
-  const [color, setColor] = useState(space.color || '#6366F1')
+  const [color, setColor] = useState(space.color || null)
   const [members, setMembers] = useState(space.space_members || [])
   const [memberEmail, setMemberEmail] = useState('')
   const [emailError, setEmailError] = useState('')
@@ -931,6 +1068,11 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
           <div className="mb-5">
             <p className="text-slate-500 text-xs font-semibold mb-2 uppercase tracking-wide">Theme Color</p>
             <div className="flex flex-wrap gap-3">
+              <button onClick={() => setColor(null)}
+                className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${!color ? 'scale-125 ring-2 ring-offset-2 ring-slate-400 border-slate-300' : 'border-slate-200 hover:scale-110'}`}
+                style={{ backgroundColor: '#ffffff' }}>
+                {!color && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>
               {SPACE_COLORS.map(c => (
                 <button key={c} onClick={() => setColor(c)}
                   className={`w-8 h-8 rounded-full transition-all ${color === c ? 'scale-125 ring-2 ring-offset-2 ring-slate-400' : 'hover:scale-110'}`}
@@ -949,7 +1091,7 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
                     className="flex items-center gap-3 flex-1 text-left min-w-0"
                   >
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                      style={{ backgroundColor: color }}>
+                      style={{ backgroundColor: memberColor(m.display_name || '') }}>
                       {(m.display_name || '?')[0].toUpperCase()}
                     </div>
                     <span className="text-slate-700 text-sm font-medium truncate">{m.display_name}</span>
@@ -1015,19 +1157,41 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
 }
 
 // ── Activity timeline drawer ──────────────────────────────────────────────────
-function ActivityDrawer({ tasks, members, spaceColor, onClose, onMemberClick }) {
+function ActivityDrawer({ tasks, members, spaceColor, moveLog, onClose, onMemberClick }) {
   const events = []
   tasks.forEach(task => {
     const creator = members.find(m => m.user_id === task.user_id)
     const creatorName = creator?.display_name || null
     if (task.created_at) {
-      events.push({ type: 'created', task, date: new Date(task.created_at), label: 'Task created', person: creatorName })
+      events.push({ type: 'created', taskName: task.task_name, date: new Date(task.created_at), label: 'Task created', person: creatorName })
     }
     if (task.is_complete) {
-      events.push({ type: 'completed', task, date: new Date(task.updated_at || task.created_at), label: 'Task completed', person: task.assignee || creatorName })
+      events.push({ type: 'completed', taskName: task.task_name, date: new Date(task.updated_at || task.created_at), label: 'Task completed', person: task.assignee || creatorName })
     }
   })
+  ;(moveLog || []).forEach(entry => {
+    events.push({
+      type: 'moved',
+      taskName: entry.taskName,
+      date: new Date(entry.at),
+      label: `${entry.fromLabel} → ${entry.toLabel}`,
+      person: entry.by,
+      fromId: entry.from,
+      toId: entry.to,
+    })
+  })
   events.sort((a, b) => b.date - a.date)
+
+  const iconColor = ev => {
+    if (ev.type === 'completed') return '#34d399'
+    if (ev.type === 'moved') return KANBAN_COLS.find(c => c.id === ev.toId)?.color || '#a78bfa'
+    return spaceColor
+  }
+  const iconGlyph = ev => {
+    if (ev.type === 'completed') return '✓'
+    if (ev.type === 'moved') return '↗'
+    return '✦'
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -1057,13 +1221,13 @@ function ActivityDrawer({ tasks, members, spaceColor, onClose, onMemberClick }) 
                   <div key={i} className="flex items-center gap-3">
                     <div
                       className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 relative z-10"
-                      style={{ backgroundColor: ev.type === 'completed' ? '#34d399' : spaceColor }}
+                      style={{ backgroundColor: iconColor(ev) }}
                     >
-                      {ev.type === 'completed' ? '✓' : '✦'}
+                      {iconGlyph(ev)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide">{ev.label}</p>
-                      <p className="text-slate-800 text-sm font-medium mt-0.5 truncate">{ev.task.task_name}</p>
+                      <p className="text-slate-800 text-sm font-medium mt-0.5 truncate">{ev.taskName}</p>
                       <p className="text-slate-400 text-[10px] mt-0.5">
                         {ev.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {ev.date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                       </p>
@@ -1071,7 +1235,7 @@ function ActivityDrawer({ tasks, members, spaceColor, onClose, onMemberClick }) 
                     {ev.person ? (
                       <button onClick={() => onMemberClick?.(ev.person)}
                         className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 transition-transform active:scale-90"
-                        style={{ backgroundColor: ev.type === 'completed' ? '#34d399' : spaceColor }}
+                        style={{ backgroundColor: memberColor(ev.person) }}
                         title={ev.person}>
                         {ev.person[0].toUpperCase()}
                       </button>
@@ -1093,7 +1257,7 @@ function ActivityDrawer({ tasks, members, spaceColor, onClose, onMemberClick }) 
 function CreateSpaceModal({ onConfirm, onCancel }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [color, setColor] = useState('#6366F1')
+  const [color, setColor] = useState(null)
   const [memberEmail, setMemberEmail] = useState('')
   const [members, setMembers] = useState([])
   const [emailError, setEmailError] = useState('')
@@ -1170,6 +1334,11 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
           <div className="mb-4">
             <p className="text-slate-500 text-xs font-semibold mb-2 uppercase tracking-wide">Theme Color</p>
             <div className="flex flex-wrap gap-3">
+              <button type="button" onClick={() => setColor(null)}
+                className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${!color ? 'scale-125 ring-2 ring-offset-2 ring-slate-400 border-slate-300' : 'border-slate-200 hover:scale-110'}`}
+                style={{ backgroundColor: '#ffffff' }}>
+                {!color && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>
               {SPACE_COLORS.map(c => (
                 <button key={c} type="button" onClick={() => setColor(c)}
                   className={`w-8 h-8 rounded-full transition-all ${color === c ? 'scale-125 ring-2 ring-offset-2 ring-slate-400' : 'hover:scale-110'}`}
@@ -1284,7 +1453,7 @@ function MemberProfileModal({ member, tasks, modifications = {}, spaceColor, onC
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold"
-                style={{ backgroundColor: spaceColor }}>
+                style={{ backgroundColor: memberColor(name) }}>
                 {name[0].toUpperCase()}
               </div>
               <div>
@@ -1554,6 +1723,463 @@ function EmptySpaces({ onCreate }) {
         className="bg-accent-deep hover:bg-accent-mid text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
         Create a Space
       </button>
+    </div>
+  )
+}
+
+// ── Kanban View ───────────────────────────────────────────────────────────────
+const KANBAN_COLS = [
+  { id: 'todo',       label: 'To Do',       color: '#64748b' },
+  { id: 'inprogress', label: 'In Progress',  color: '#f59e0b' },
+  { id: 'done',       label: 'Done',         color: '#10b981' },
+]
+
+function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, onToggle, onClick, onMemberClick, onStatusChange, onDrop }) {
+  const [draggedTask, setDraggedTask] = useState(null)
+  const [draggedFrom, setDraggedFrom] = useState(null)
+  const [dragOverCol, setDragOverCol] = useState(null)
+
+  const cols = {
+    todo:       tasks.filter(t => !t.is_complete && !inProgressIds.has(t.id)),
+    inprogress: tasks.filter(t => !t.is_complete &&  inProgressIds.has(t.id)),
+    done:       tasks.filter(t =>  t.is_complete),
+  }
+
+  function onCardDragStart(task, colId) {
+    setDraggedTask(task)
+    setDraggedFrom(colId)
+  }
+
+  function onCardDragEnd() {
+    setDraggedTask(null)
+    setDraggedFrom(null)
+    setDragOverCol(null)
+  }
+
+  function onColDragOver(e, colId) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverCol !== colId) setDragOverCol(colId)
+  }
+
+  function onColDragLeave(e) {
+    if (!e.currentTarget.contains(e.relatedTarget)) setDragOverCol(null)
+  }
+
+  function onColDrop(e, toColId) {
+    e.preventDefault()
+    if (draggedTask && draggedFrom !== toColId) {
+      onDrop?.(draggedTask, toColId)
+    }
+    setDraggedTask(null)
+    setDraggedFrom(null)
+    setDragOverCol(null)
+  }
+
+  return (
+    <div className="flex gap-3 px-4 pb-4" style={{ minWidth: `${KANBAN_COLS.length * 288 + 32}px` }}>
+      {KANBAN_COLS.map(col => {
+        const isOver = dragOverCol === col.id && draggedFrom !== col.id
+        return (
+          <div
+            key={col.id}
+            className="flex-shrink-0 w-72 flex flex-col rounded-2xl transition-all duration-200"
+            style={isOver ? { backgroundColor: col.color + '14' } : undefined}
+            onDragOver={e => onColDragOver(e, col.id)}
+            onDragLeave={onColDragLeave}
+            onDrop={e => onColDrop(e, col.id)}
+          >
+            <div className="flex items-center gap-2 px-1 py-2 mb-1">
+              <div className="w-2.5 h-2.5 rounded-full transition-transform duration-150" style={{ backgroundColor: col.color, transform: isOver ? 'scale(1.3)' : 'scale(1)' }} />
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">{col.label}</span>
+              <span className="ml-auto text-[10px] font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{cols[col.id].length}</span>
+            </div>
+            <div className={`flex flex-col gap-2 flex-1 min-h-[100px] rounded-xl p-1.5 transition-all duration-200 ${isOver ? 'ring-2 ring-dashed' : ''}`}
+              style={isOver ? { ringColor: col.color + '60' } : undefined}>
+              {cols[col.id].map(task => (
+                <KanbanCard
+                  key={task.id} task={task} members={members}
+                  themeColor={themeColor} columnId={col.id}
+                  isDragging={draggedTask?.id === task.id}
+                  onClick={() => !draggedTask && onClick(task)}
+                  onMemberClick={onMemberClick}
+                  onStatusChange={newStatus => onStatusChange(task, newStatus)}
+                  onDragStart={() => onCardDragStart(task, col.id)}
+                  onDragEnd={onCardDragEnd}
+                />
+              ))}
+              {cols[col.id].length === 0 && (
+                <div
+                  className={`flex-1 border-2 border-dashed rounded-2xl flex items-center justify-center py-8 transition-all duration-200 ${isOver ? 'border-current scale-[1.01]' : 'border-slate-100'}`}
+                  style={isOver ? { borderColor: col.color + '80', backgroundColor: col.color + '10' } : undefined}
+                >
+                  <p className="text-xs font-medium" style={isOver ? { color: col.color } : { color: '#cbd5e1' }}>
+                    {isOver ? '↓ Drop here' : 'Empty'}
+                  </p>
+                </div>
+              )}
+              {/* Drop zone hint when col has cards and is hovered */}
+              {isOver && cols[col.id].length > 0 && (
+                <div className="h-12 border-2 border-dashed rounded-2xl flex items-center justify-center transition-all duration-150"
+                  style={{ borderColor: col.color + '60', backgroundColor: col.color + '08' }}>
+                  <p className="text-[10px] font-medium" style={{ color: col.color }}>↓ Drop here</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function KanbanCard({ task, members, themeColor, columnId, onClick, onMemberClick, onStatusChange, isDragging, onDragStart, onDragEnd }) {
+  const [showStatus, setShowStatus] = useState(false)
+  const colors = getCategoryColor(task.category)
+  const creator = members.find(m => m.user_id === task.user_id)
+  const creatorName = creator?.display_name || null
+  const rawAssignee = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined') ? task.assignee : null
+  const assignee = rawAssignee || creatorName
+  const currentCol = KANBAN_COLS.find(c => c.id === columnId)
+
+  return (
+    <div
+      draggable
+      onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', task.id); onDragStart?.() }}
+      onDragEnd={onDragEnd}
+      className={`rounded-2xl p-3 card-elevated transition-all duration-200 select-none ${
+        isDragging
+          ? 'opacity-40 scale-95 rotate-1 cursor-grabbing shadow-xl'
+          : 'cursor-grab active:cursor-grabbing active:scale-[0.98] hover:shadow-lg'
+      }`}
+      style={{ backgroundColor: themeColor ? themeColor + '28' : '#ffffff' }}
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={e => { e.stopPropagation(); setShowStatus(v => !v) }}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+          style={{ backgroundColor: currentCol?.color }}
+        >
+          {currentCol?.label}
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: colors.bg, color: colors.text }}>
+          {task.category}
+        </span>
+      </div>
+      {showStatus && (
+        <div className="mb-2 flex gap-1.5 flex-wrap">
+          {KANBAN_COLS.filter(c => c.id !== columnId).map(c => (
+            <button key={c.id}
+              onClick={e => { e.stopPropagation(); onStatusChange(c.id); setShowStatus(false) }}
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+              style={{ backgroundColor: c.color }}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className={`text-sm font-semibold leading-tight mb-2.5 ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
+        {task.task_name}
+      </p>
+      <div className="flex items-end justify-between">
+        <div>
+          {task.due_date && <p className="text-[10px] text-slate-400">{formatDueDate(task.due_date)}</p>}
+          <p className="text-[9px] text-slate-300 mt-0.5">
+            {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </p>
+        </div>
+        <div className="flex items-center">
+          {assignee && (
+            <button onClick={e => { e.stopPropagation(); onMemberClick?.(assignee) }}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white"
+              style={{ backgroundColor: memberColor(assignee) }}>
+              {assignee[0].toUpperCase()}
+            </button>
+          )}
+          {creatorName && creatorName !== assignee && (
+            <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
+              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold ring-2 ring-white -ml-1.5"
+              style={{ backgroundColor: memberColor(creatorName) }}>
+              {creatorName[0].toUpperCase()}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Table View ────────────────────────────────────────────────────────────────
+function TableView({ tasks, members, themeColor, inProgressIds, modifications, onToggle, onClick, onMemberClick, onStatusChange }) {
+  const headerBg = themeColor ? themeColor + '30' : '#f8fafc'
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse" style={{ minWidth: '700px' }}>
+        <thead>
+          <tr style={{ backgroundColor: headerBg }}>
+            {['', 'Task', 'Status', 'Assignee', 'Reporter', 'Created', 'Updated', 'Due'].map((h, i) => (
+              <th key={i} className={`py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8 ${i === 0 ? 'w-10 px-4' : 'px-3'}`}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="py-16 text-center text-slate-300 text-sm">No tasks</td>
+            </tr>
+          ) : tasks.map(task => (
+            <TableRow
+              key={task.id}
+              task={task}
+              members={members}
+              themeColor={themeColor}
+              columnId={task.is_complete ? 'done' : inProgressIds.has(task.id) ? 'inprogress' : 'todo'}
+              modification={modifications?.[task.id] || null}
+              onToggle={() => onToggle(task)}
+              onClick={() => onClick(task)}
+              onMemberClick={onMemberClick}
+              onStatusChange={newStatus => onStatusChange(task, newStatus)}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function TableRow({ task, members, themeColor, columnId, modification, onToggle, onClick, onMemberClick, onStatusChange }) {
+  const [showStatus, setShowStatus] = useState(false)
+  const colors  = getCategoryColor(task.category)
+  const creator = members.find(m => m.user_id === task.user_id)
+  const creatorName  = creator?.display_name || null
+  const rawAssignee  = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined') ? task.assignee : null
+  const assignee     = rawAssignee || creatorName
+  const currentCol   = KANBAN_COLS.find(c => c.id === columnId)
+  const updatedAt    = modification?.at || task.updated_at || task.created_at
+  const isOverdue    = task.due_date && !task.is_complete && new Date(task.due_date) < new Date()
+  const rowBg        = themeColor ? themeColor + '10' : undefined
+
+  return (
+    <tr
+      className="group border-b border-black/[0.04] cursor-pointer transition-colors hover:brightness-95"
+      style={rowBg ? { backgroundColor: rowBg } : {}}
+      onClick={onClick}
+    >
+      {/* Check */}
+      <td className="py-3 px-4 w-10" onClick={e => { e.stopPropagation(); onToggle() }}>
+        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors mx-auto ${
+          task.is_complete ? 'bg-emerald-500 border-emerald-500' : 'border-slate-200 group-hover:border-slate-300'
+        }`}>
+          {task.is_complete && (
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </div>
+      </td>
+
+      {/* Task */}
+      <td className="py-3 px-3 max-w-[180px]">
+        <p className={`text-sm font-medium leading-tight truncate ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
+          {task.task_name}
+        </p>
+        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 inline-block"
+          style={{ backgroundColor: colors.bg, color: colors.text }}>
+          {task.category}
+        </span>
+      </td>
+
+      {/* Status */}
+      <td className="py-3 px-3 w-28" onClick={e => e.stopPropagation()}>
+        <div className="relative">
+          <button
+            onClick={() => setShowStatus(v => !v)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-white whitespace-nowrap"
+            style={{ backgroundColor: currentCol?.color }}
+          >
+            {currentCol?.label}
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          {showStatus && (
+            <div className="absolute top-full left-0 mt-1 z-20 bg-white rounded-xl shadow-xl border border-black/8 overflow-hidden min-w-[120px]">
+              {KANBAN_COLS.filter(c => c.id !== columnId).map(c => (
+                <button key={c.id}
+                  onClick={() => { onStatusChange(c.id); setShowStatus(false) }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-slate-50 transition-colors">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                  <span className="text-xs font-medium text-slate-700">{c.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </td>
+
+      {/* Assignee */}
+      <td className="py-3 px-3 w-28">
+        {assignee && (
+          <button onClick={e => { e.stopPropagation(); onMemberClick?.(assignee) }}
+            className="flex items-center gap-1.5 group/av">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+              style={{ backgroundColor: memberColor(assignee) }}>
+              {assignee[0].toUpperCase()}
+            </div>
+            <span className="text-xs text-slate-500 truncate max-w-[56px] group-hover/av:text-accent-deep transition-colors">{assignee}</span>
+          </button>
+        )}
+      </td>
+
+      {/* Reporter */}
+      <td className="py-3 px-3 w-28">
+        {creatorName && (
+          <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
+            className="flex items-center gap-1.5 group/av">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+              style={{ backgroundColor: memberColor(creatorName) }}>
+              {creatorName[0].toUpperCase()}
+            </div>
+            <span className="text-xs text-slate-500 truncate max-w-[56px] group-hover/av:text-accent-deep transition-colors">{creatorName}</span>
+          </button>
+        )}
+      </td>
+
+      {/* Created */}
+      <td className="py-3 px-3 w-24">
+        <span className="text-xs text-slate-400 whitespace-nowrap">
+          {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </span>
+      </td>
+
+      {/* Updated */}
+      <td className="py-3 px-3 w-24">
+        <span className="text-xs text-slate-400 whitespace-nowrap">
+          {new Date(updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </span>
+      </td>
+
+      {/* Due */}
+      <td className="py-3 px-3 w-24">
+        {task.due_date ? (
+          <span className={`text-xs font-medium whitespace-nowrap ${isOverdue ? 'text-red-400' : 'text-slate-400'}`}>
+            {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        ) : (
+          <span className="text-slate-200 text-xs">—</span>
+        )}
+      </td>
+    </tr>
+  )
+}
+
+// ── Space Details Modal ───────────────────────────────────────────────────────
+function SpaceDetailsModal({ tasks, members, spaceColor, onClose }) {
+  const total     = tasks.length
+  const completed = tasks.filter(t => t.is_complete).length
+  const pending   = total - completed
+  const rate      = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  const catStats = ['Work','Personal','School','Errands','Health'].map(cat => {
+    const ct = tasks.filter(t => t.category === cat)
+    return { cat, total: ct.length, done: ct.filter(t => t.is_complete).length }
+  }).filter(s => s.total > 0)
+
+  const memberStats = members.map(m => {
+    const assigned = tasks.filter(t =>
+      t.assignee?.toLowerCase() === m.display_name?.toLowerCase() ||
+      (!t.assignee && t.user_id === m.user_id)
+    )
+    return { name: m.display_name, total: assigned.length, done: assigned.filter(t => t.is_complete).length }
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col shadow-2xl">
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+        </div>
+        <div className="px-6 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
+          <h2 className="text-slate-900 font-bold text-lg">Space Details</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-6 pb-8 space-y-5">
+          {/* Overview */}
+          <div className="grid grid-cols-3 gap-3">
+            {[{ label: 'Total', value: total, color: spaceColor }, { label: 'Done', value: completed, color: '#10b981' }, { label: 'Pending', value: pending, color: '#f59e0b' }].map(s => (
+              <div key={s.label} className="bg-slate-50 rounded-2xl p-3 text-center">
+                <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
+                <p className="text-slate-400 text-xs mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          {/* Overall progress */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-slate-500 text-xs font-semibold uppercase tracking-wide">Overall Progress</span>
+              <span className="text-slate-700 text-xs font-bold">{rate}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, backgroundColor: spaceColor }} />
+            </div>
+          </div>
+          {/* By category */}
+          {catStats.length > 0 && (
+            <div>
+              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-3">By Category</p>
+              <div className="space-y-3">
+                {catStats.map(s => {
+                  const col = getCategoryColor(s.cat)
+                  const pct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0
+                  return (
+                    <div key={s.cat}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold" style={{ color: col.text }}>{s.cat}</span>
+                        <span className="text-slate-400 text-xs">{s.done}/{s.total} · {pct}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: col.border }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {/* Member contributions */}
+          <div>
+            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-3">Member Contributions</p>
+            <div className="space-y-3">
+              {memberStats.map(s => {
+                const pct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0
+                return (
+                  <div key={s.name} className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                      style={{ backgroundColor: memberColor(s.name) }}>
+                      {(s.name || '?')[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-medium text-slate-700 truncate">{s.name}</span>
+                        <span className="text-slate-400 text-[10px] ml-2 flex-shrink-0">{s.done}/{s.total}</span>
+                      </div>
+                      <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: memberColor(s.name) }} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

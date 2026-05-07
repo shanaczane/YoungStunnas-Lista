@@ -30,6 +30,7 @@ export default function TasksScreen({
   const [collapsed, setCollapsed]           = useState({})
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [categoryToEdit, setCategoryToEdit]   = useState(null)
+  const [directDeleteCat, setDirectDeleteCat] = useState(null)
   const [input, setInput]     = useState('')
   const [parsing, setParsing] = useState(false)
   const [parseCard, setParseCard] = useState(null)
@@ -92,6 +93,20 @@ export default function TasksScreen({
     return { data: true }
   }
 
+  async function handleDirectDeleteConfirm() {
+    if (!directDeleteCat?.id) return
+    const tasksInCategory = tasks.filter(t => t.category === directDeleteCat.name)
+    if (tasksInCategory.length > 0) {
+      await supabase.from('tasks').update({ category: 'Personal' })
+        .eq('user_id', session.user.id).eq('category', directDeleteCat.name)
+    }
+    await deleteCategory(directDeleteCat.id)
+    await onCategoriesChanged?.()
+    await onTasksChanged?.()
+    if (activeCategory?.name === directDeleteCat.name) setActiveCategory(null)
+    setDirectDeleteCat(null)
+  }
+
   async function handleSend() {
     const trimmed = input.trim()
     if (!trimmed || parsing) return
@@ -152,19 +167,37 @@ export default function TasksScreen({
           <div className="space-y-3">
             {withTasks.map(folder => {
               const colors = getCategoryColor(folder.name, categories)
+              const done = tasks.filter(t => t.category === folder.name && t.is_complete).length
+              const pct = folder.taskCount > 0 ? Math.round((done / folder.taskCount) * 100) : 0
               return (
-                <button key={folder.name} onClick={() => setActiveCategory(folder)} className="w-full bg-card-bg rounded-2xl p-4 card-elevated flex items-center gap-4 transition-all active:scale-[0.99] text-left">
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
-                    <CategoryIcon name={folder.name} iconId={folder.emoji} />
+                <div key={folder.name} className="w-full bg-white rounded-2xl p-4 card-elevated transition-all active:scale-[0.99]">
+                  <button onClick={() => setActiveCategory(folder)} className="w-full flex items-center gap-4 text-left">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
+                      <CategoryIcon name={folder.name} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-900 font-semibold text-base truncate">{folder.name}</p>
+                      <p className="text-slate-400 text-xs mt-0.5">{done}/{folder.taskCount} done</p>
+                    </div>
+                    {isCustomCategory(folder.name) && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setDirectDeleteCat({ ...folder, taskCount: folder.taskCount }) }}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-slate-200 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                          <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
+                        </svg>
+                      </button>
+                    )}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 shrink-0">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+                  <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: colors.border }} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-slate-900 font-semibold text-base truncate">{folder.name}</p>
-                    <p className="text-slate-400 text-xs mt-0.5">{folder.taskCount} task{folder.taskCount !== 1 ? 's' : ''}</p>
-                  </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 shrink-0">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
-                </button>
+                  <p className="text-[10px] text-slate-300 mt-1">{pct}% complete</p>
+                </div>
               )
             })}
 
@@ -227,6 +260,14 @@ export default function TasksScreen({
             onSaveCategory={handleEditCategory}
             onDeleteCategory={handleDeleteCategory}
             onCancel={() => setCategoryToEdit(null)}
+          />
+        )}
+        {directDeleteCat && (
+          <DeleteCategoryConfirmSheet
+            category={directDeleteCat}
+            deleting={false}
+            onCancel={() => setDirectDeleteCat(null)}
+            onConfirm={handleDirectDeleteConfirm}
           />
         )}
       </div>
