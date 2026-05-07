@@ -331,21 +331,21 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
   }
 
   function handleStatusChange(task, newStatus) {
+    // Compute toggle need before entering state updater to avoid side-effects inside setState
+    const needsToggle =
+      (newStatus === 'inprogress' && task.is_complete) ||
+      (newStatus === 'todo' && task.is_complete) ||
+      (newStatus === 'done' && !task.is_complete)
+
     setInProgressIds(prev => {
       const next = new Set(prev)
-      if (newStatus === 'inprogress') {
-        next.add(task.id)
-        if (task.is_complete) handleToggle(task)
-      } else if (newStatus === 'todo') {
-        next.delete(task.id)
-        if (task.is_complete) handleToggle(task)
-      } else if (newStatus === 'done') {
-        next.delete(task.id)
-        if (!task.is_complete) handleToggle(task)
-      }
+      if (newStatus === 'inprogress') next.add(task.id)
+      else next.delete(task.id)
       localStorage.setItem(`lista_kanban_${space.id}`, JSON.stringify([...next]))
       return next
     })
+
+    if (needsToggle) handleToggle(task)
   }
 
   function handleLogMove(task, fromColId, toColId) {
@@ -548,9 +548,10 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
           </button>
           <div className="flex items-center gap-1 bg-slate-100/80 rounded-full p-1">
             {[
-              { id: 'list',   label: 'List',   icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
-              { id: 'kanban', label: 'Kanban', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="5" height="18" rx="1"/></svg> },
-              { id: 'table',  label: 'Table',  icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg> },
+              { id: 'list',    label: 'List',    icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+              { id: 'kanban',  label: 'Kanban',  icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="5" height="18" rx="1"/></svg> },
+              { id: 'table',   label: 'Table',   icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg> },
+              { id: 'members', label: 'Members', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
             ].map(v => (
               <button key={v.id} onClick={() => setViewMode(v.id)}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${viewMode === v.id ? 'bg-white text-accent-deep shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -626,7 +627,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
       )}
       </div>
 
-      {/* Task list / Kanban / Table */}
+      {/* Task list / Kanban / Table / Members */}
       {viewMode === 'kanban' ? (
         <div className="flex-1 overflow-x-auto overflow-y-auto pb-44 pt-2">
           <KanbanView
@@ -655,6 +656,19 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             onClick={task => setEditingTask(task)}
             onMemberClick={openMemberProfile}
             onStatusChange={handleStatusChange}
+          />
+        </div>
+      ) : viewMode === 'members' ? (
+        <div className="flex-1 overflow-y-auto pb-44 pt-2">
+          <MemberView
+            tasks={tasks}
+            members={members}
+            inProgressIds={inProgressIds}
+            modifications={modifications}
+            spaceColor={spaceColor}
+            themeColor={spaceData.color}
+            onMemberClick={openMemberProfile}
+            onTaskClick={task => setEditingTask(task)}
           />
         </div>
       ) : (
@@ -1938,6 +1952,191 @@ function KanbanCard({ task, members, themeColor, columnId, modification, onClick
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Member View ───────────────────────────────────────────────────────────────
+function MemberView({ tasks, members, inProgressIds, modifications, spaceColor, themeColor, onMemberClick, onTaskClick }) {
+  const [memberSort, setMemberSort] = useState('active')
+  const [collapsed, setCollapsed] = useState({})
+
+  const memberData = members.map(m => {
+    const name = m.display_name || ''
+    const assigned = tasks.filter(t => {
+      const raw = (t.assignee && t.assignee !== 'null' && t.assignee !== 'undefined') ? t.assignee : null
+      const effective = raw || members.find(mx => mx.user_id === t.user_id)?.display_name
+      return effective?.toLowerCase() === name.toLowerCase()
+    })
+    const completed  = assigned.filter(t => t.is_complete).length
+    const inProgress = assigned.filter(t => inProgressIds.has(t.id) && !t.is_complete).length
+    const overdue    = assigned.filter(t => t.due_date && !t.is_complete && new Date(t.due_date) < new Date()).length
+    const lastActive = assigned.reduce((latest, t) => {
+      const d = new Date(modifications[t.id]?.at || t.updated_at || t.created_at)
+      return d > latest ? d : latest
+    }, new Date(0))
+    return { member: m, name, tasks: assigned, completed, inProgress, overdue, lastActive }
+  })
+
+  const sorted = [...memberData].sort((a, b) => {
+    if (memberSort === 'completed') return b.completed - a.completed
+    if (memberSort === 'overdue')   return b.overdue - a.overdue
+    if (memberSort === 'recent')    return b.lastActive - a.lastActive
+    return b.tasks.length - a.tasks.length
+  })
+
+  const SORT_OPTIONS = [
+    { id: 'active',    label: 'Most Active' },
+    { id: 'completed', label: 'Most Done' },
+    { id: 'overdue',   label: 'Overdue' },
+    { id: 'recent',    label: 'Recently Active' },
+  ]
+
+  return (
+    <div className="px-4 pb-2 space-y-3">
+      {/* Sort bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        <span className="text-slate-400 text-[10px] font-semibold flex-shrink-0">Sort:</span>
+        {SORT_OPTIONS.map(opt => (
+          <button key={opt.id} onClick={() => setMemberSort(opt.id)}
+            className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+              memberSort === opt.id ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'
+            }`}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {sorted.map(({ member, name, tasks: memberTasks, completed, inProgress, overdue }) => {
+        const isCollapsed = !!collapsed[member.user_id]
+        const completionRate = memberTasks.length > 0 ? Math.round((completed / memberTasks.length) * 100) : 0
+        return (
+          <div key={member.user_id} className="rounded-2xl overflow-hidden card-elevated"
+            style={{ backgroundColor: themeColor ? themeColor + '18' : '#ffffff' }}>
+
+            {/* Section header — tap to collapse */}
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 text-left"
+              onClick={() => setCollapsed(prev => ({ ...prev, [member.user_id]: !prev[member.user_id] }))}
+            >
+              {/* Avatar — tapping opens profile */}
+              <button
+                onClick={e => { e.stopPropagation(); onMemberClick?.(name) }}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 transition-transform active:scale-90"
+                style={{ backgroundColor: memberColor(name) }}
+              >
+                {name[0]?.toUpperCase() || '?'}
+              </button>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-800 font-bold text-sm truncate">{name}</p>
+                  <span className="text-[10px] text-slate-400">{memberTasks.length} task{memberTasks.length !== 1 ? 's' : ''}</span>
+                  {memberTasks.length > 0 && (
+                    <span className="text-[10px] font-semibold text-accent-deep">{completionRate}%</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {completed > 0  && <span className="text-emerald-500 text-[10px] font-semibold">✓ {completed} done</span>}
+                  {inProgress > 0 && <span className="text-amber-500  text-[10px] font-semibold">↻ {inProgress} in progress</span>}
+                  {overdue > 0    && <span className="text-red-400    text-[10px] font-semibold">⚠ {overdue} overdue</span>}
+                </div>
+                {/* Progress bar */}
+                {memberTasks.length > 0 && (
+                  <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${completionRate}%`, backgroundColor: memberColor(name) }} />
+                  </div>
+                )}
+              </div>
+
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                className={`text-slate-300 flex-shrink-0 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}`}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+
+            {/* Task cards */}
+            {!isCollapsed && (
+              <div className="px-3 pb-3 space-y-2">
+                {memberTasks.length === 0 ? (
+                  <p className="text-slate-300 text-xs text-center py-4">No tasks assigned</p>
+                ) : (
+                  memberTasks.map(task => (
+                    <MemberTaskCard
+                      key={task.id}
+                      task={task}
+                      members={members}
+                      inProgressIds={inProgressIds}
+                      modification={modifications?.[task.id] || null}
+                      themeColor={themeColor}
+                      onClick={() => onTaskClick?.(task)}
+                      onMemberClick={onMemberClick}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function MemberTaskCard({ task, members, inProgressIds, modification, themeColor, onClick, onMemberClick }) {
+  const colors    = getCategoryColor(task.category)
+  const creator   = members.find(m => m.user_id === task.user_id)
+  const creatorName = creator?.display_name || null
+  const rawAssignee = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined') ? task.assignee : null
+  const assignee  = rawAssignee || creatorName
+  const status    = task.is_complete ? 'done' : inProgressIds.has(task.id) ? 'inprogress' : 'todo'
+  const statusCol = KANBAN_COLS.find(c => c.id === status)
+  const isOverdue = task.due_date && !task.is_complete && new Date(task.due_date) < new Date()
+
+  return (
+    <button onClick={onClick}
+      className="w-full rounded-xl flex items-stretch overflow-hidden text-left transition-all active:scale-[0.99] card-elevated"
+      style={{ backgroundColor: themeColor ? themeColor + '28' : '#f8fafc' }}
+    >
+      <div className="w-1 flex-shrink-0" style={{ backgroundColor: modification ? '#8B5CF6' : colors.border }} />
+      <div className="flex-1 px-3 py-2.5 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <p className={`text-sm font-semibold leading-tight flex-1 ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
+            {task.task_name}
+          </p>
+          <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold text-white"
+            style={{ backgroundColor: statusCol?.color }}>
+            {statusCol?.label}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+            style={{ backgroundColor: colors.bg, color: colors.text }}>
+            {task.category}
+          </span>
+          {task.due_date && (
+            <span className={`text-[9px] font-medium ${isOverdue ? 'text-red-400' : 'text-slate-400'}`}>
+              {isOverdue ? '⚠ ' : ''}{formatDueDate(task.due_date)}
+            </span>
+          )}
+          {modification && (
+            <span className="text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">Modified</span>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="text-slate-300 text-[9px]">
+            {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+          {creatorName && assignee !== creatorName && (
+            <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
+              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0 transition-transform active:scale-90"
+              style={{ backgroundColor: memberColor(creatorName) }}>
+              {creatorName[0].toUpperCase()}
+            </button>
+          )}
+        </div>
+      </div>
+    </button>
   )
 }
 
