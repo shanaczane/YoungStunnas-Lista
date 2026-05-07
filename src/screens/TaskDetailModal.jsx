@@ -11,7 +11,7 @@ const REMINDER_OPTIONS = [
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
-export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
+export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
   const [taskName, setTaskName] = useState(task.task_name)
   const [category, setCategory] = useState(task.category || 'Personal')
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
@@ -105,7 +105,11 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
     if (e.target === e.currentTarget) handleClose()
   }
 
-  const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
+  const usedNames = new Set(tasks.map(t => t.category))
+  const allCategories = [
+    ...BUILT_IN_CATEGORIES.filter(b => usedNames.has(b.name) || b.name === category),
+    ...categories,
+  ]
 
   return (
     <div

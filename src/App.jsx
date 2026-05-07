@@ -211,6 +211,7 @@ export default function App() {
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
+          tasks={tasks}
           categories={categories}
           session={session}
           onClose={closeTask}
