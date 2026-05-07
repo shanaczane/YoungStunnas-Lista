@@ -154,6 +154,7 @@ export default function App() {
             tasks={tasks}
             categories={categories}
             onTaskCreated={handleTaskCreated}
+            onTaskUpdated={handleTaskUpdated}
             onNavigate={navigateTo}
             onOpenTask={openTask}
             onCategoriesChanged={() => loadCategories(session.user.id)}
