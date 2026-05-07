@@ -65,7 +65,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
       className="fixed inset-0 z-50 flex items-end bg-black/30 backdrop-blur-sm"
       onClick={handleBackdrop}
     >
-      <div className="w-full bg-white rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-black/10">
+      <div className="w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-divider">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
@@ -151,7 +151,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                   }}
                   placeholder="New category name..."
                   autoFocus
-                  className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+                  className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-divider focus:border-accent-deep"
                 />
                 <button
                   onClick={async () => {
@@ -175,12 +175,12 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
               type="datetime-local"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep transition-colors"
             />
           </div>
 
           {checklistItems ? (
-            <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
+            <div className="mb-4 bg-slate-50 rounded-xl border border-divider px-4 py-3">
               <input
                 type="text"
                 value={checklistTitle}
@@ -264,12 +264,12 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Add notes..."
                 rows={3}
-                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
+                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
               />
             </div>
           )}
 
-          <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-black/10">
+          <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-divider">
             <div className="flex items-center justify-between">
               <p className="text-slate-800 text-sm font-medium">Remind me before due</p>
               <button

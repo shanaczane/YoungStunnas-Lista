@@ -161,7 +161,7 @@ export default function TasksScreen({
             {withTasks.map(folder => {
               const colors = getCategoryColor(folder.name, categories)
               return (
-                <button key={folder.name} onClick={() => setActiveCategory(folder)} className="w-full bg-white rounded-2xl p-4 card-elevated flex items-center gap-4 transition-all active:scale-[0.99] text-left">
+                <button key={folder.name} onClick={() => setActiveCategory(folder)} className="w-full bg-card-bg rounded-2xl p-4 card-elevated flex items-center gap-4 transition-all active:scale-[0.99] text-left">
                   <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
                     <CategoryIcon name={folder.name} />
                   </div>
@@ -179,7 +179,7 @@ export default function TasksScreen({
             {emptyCustom.map(cat => {
               const colors = getCategoryColor(cat.name, categories)
               return (
-                <button key={cat.name} onClick={() => setActiveCategory(cat)} className="w-full bg-white/60 rounded-2xl p-4 border border-dashed border-slate-200 flex items-center gap-4 transition-all active:scale-[0.99] text-left">
+                <button key={cat.name} onClick={() => setActiveCategory(cat)} className="w-full bg-card-bg/40 rounded-2xl p-4 border border-dashed border-divider flex items-center gap-4 transition-all active:scale-[0.99] text-left">
                   <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 opacity-40" style={{ backgroundColor: colors.border }}>
                     <CategoryIcon name={cat.name} />
                   </div>
@@ -196,7 +196,7 @@ export default function TasksScreen({
 
             {withTasks.length === 0 && emptyCustom.length === 0 && (
               <div className="flex flex-col items-center py-10 text-center">
-                <img src={mascot} alt="" className="w-24 h-24 object-contain mb-3 opacity-60" style={{ mixBlendMode: 'multiply' }} />
+                <img src={mascot} alt="" className="w-24 h-24 object-contain mb-3 opacity-60" />
                 <p className="text-slate-400 text-sm font-medium">No tasks yet</p>
                 <p className="text-slate-300 text-xs mt-1">Add tasks from Home to get started</p>
               </div>
@@ -204,9 +204,9 @@ export default function TasksScreen({
 
             <button
               onClick={() => setShowNewCategory(true)}
-              className="w-full bg-transparent border-2 border-dashed border-slate-200 rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.99] hover:border-accent-deep/30"
+              className="w-full bg-transparent border-2 border-dashed border-divider rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.99] hover:border-accent-deep/30"
             >
-              <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 shrink-0">
+              <div className="w-12 h-12 rounded-full border-2 border-dashed border-divider flex items-center justify-center text-slate-300 shrink-0">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
@@ -278,9 +278,9 @@ export default function TasksScreen({
         </div>
         <button
           onClick={() => handleRequestEditCategory(activeCategory, catTasks.length)}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors shrink-0"
+          className="mt-10 w-12 h-12 rounded-full flex items-center justify-center text-slate-300 hover:text-accent-deep hover:bg-accent-pale transition-colors shrink-0"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
           </svg>
         </button>
@@ -325,7 +325,7 @@ export default function TasksScreen({
 
       <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
-          <div className="bg-white rounded-2xl p-4 card-elevated-lg animate-slide-up">
+          <div className="bg-card-bg rounded-2xl p-4 card-elevated-lg animate-slide-up">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.text }}>AI Parsed · {activeCategory.name}</span>
               {parseError && <p className="text-amber-500 text-[10px]">{parseError}</p>}
@@ -356,7 +356,7 @@ export default function TasksScreen({
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 card-elevated">
+        <div className="flex items-center gap-2 bg-card-bg rounded-2xl px-4 py-3 card-elevated">
           <input ref={inputRef} type="text" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSend() } }}
@@ -458,7 +458,7 @@ function CategoryIcon({ name }) {
 
 function TaskCard({ task, colors, onToggle, onOpen }) {
   return (
-    <div className="bg-white rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99]">
+    <div className="bg-card-bg rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99]">
       <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: colors.border }} />
       <button onClick={onOpen} className="flex-1 py-3.5 pl-3 text-left min-w-0">
         <p className={`text-sm font-semibold leading-tight truncate ${
@@ -563,7 +563,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
         else onCancel()
       }}
     >
-      <div className="w-full bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
+      <div className="w-full bg-card-bg rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-slate-900 font-bold text-lg mb-5">
           {isEditing ? 'Edit Category' : 'New Category'}
         </h2>
@@ -700,7 +700,7 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
       className="fixed inset-0 z-60 flex items-end bg-black/50 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget && !deleting) onCancel() }}
     >
-      <div className="w-full bg-white rounded-t-3xl p-6 shadow-2xl">
+      <div className="w-full bg-card-bg rounded-t-3xl p-6 shadow-2xl">
         <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 6h18"/>
@@ -775,7 +775,7 @@ function AddCategoryButton({ session, categories, onCreated }) {
 function EmptyCategory({ onNavigate }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[30vh] text-center">
-      <img src={mascot} alt="Lista" className="w-24 h-24 object-contain mb-2 opacity-70" style={{ mixBlendMode: 'multiply' }} />
+      <img src={mascot} alt="Lista" className="w-24 h-24 object-contain mb-2 opacity-70" />
       <p className="text-slate-500 font-semibold text-sm">No tasks here yet</p>
       <p className="text-slate-400 text-xs mt-1 mb-3">Head to Home and add one</p>
       <button

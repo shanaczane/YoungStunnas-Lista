@@ -13,8 +13,8 @@ export default function BottomNav({ active, onNavigate, onAddTask, onImageCaptur
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 border-t border-black/8 flex items-end z-20 backdrop-blur-md"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)', backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 -2px 12px rgba(10,46,92,0.07)' }}
+      className="fixed bottom-0 left-0 right-0 border-t border-divider flex items-end z-20 backdrop-blur-md"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)', backgroundColor: 'var(--color-nav-bg)', boxShadow: '0 -2px 12px var(--color-shadow-main)' }}
     >
       {leftTabs.map(tab => (
         <TabButton key={tab.id} tab={tab} active={active} onNavigate={onNavigate} />
