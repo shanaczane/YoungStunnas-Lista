@@ -103,10 +103,21 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
 
   async function fetchSpaces() {
     setLoading(true)
+    // Get all spaces where user is a member (includes owned spaces since owner is always added)
+    const { data: memberOf } = await supabase
+      .from('space_members')
+      .select('space_id')
+      .eq('user_id', session.user.id)
+    const spaceIds = (memberOf || []).map(m => m.space_id)
+    if (!spaceIds.length) {
+      setSpaces([])
+      setLoading(false)
+      return
+    }
     const { data } = await supabase
       .from('spaces')
       .select('*, space_members(user_id, display_name)')
-      .eq('owner_id', session.user.id)
+      .in('id', spaceIds)
       .order('created_at', { ascending: false })
     const fetched = data || []
     setSpaces(fetched)
