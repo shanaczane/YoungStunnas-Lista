@@ -71,6 +71,10 @@ export default function App() {
 
   useEffect(() => {
     if (!session?.user) return
+    // Auto-register user in profiles so others can find them by User ID
+    const userCode = session.user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
+    const dn = session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User'
+    supabase.from('profiles').upsert({ id: session.user.id, display_name: dn, user_code: userCode }, { onConflict: 'id' })
     fetchTasks(session.user.id)
     loadCategories(session.user.id)
 

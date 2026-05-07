@@ -1232,27 +1232,41 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
       else setMemberError('Could not add member')
     } else {
       // User ID mode: LISTA-XXXXXXXX → first 8 chars of UUID (no dashes)
-      const clean = val.replace(/^LISTA-?/i, '').trim().toLowerCase()
+      const clean = val.replace(/^LISTA-?/i, '').trim()
       if (clean.length < 6) { setMemberError('Invalid User ID — format: LISTA-XXXXXXXX'); setAddingMember(false); return }
-      // UUID format: xxxxxxxx-xxxx-... so first 8 chars match the code directly
-      const { data: found } = await supabase
-        .from('space_members')
-        .select('user_id, display_name')
-        .ilike('user_id', `${clean}%`)
-        .limit(1)
+
+      // Try profiles table first (registered on login)
+      let foundId = null, foundName = null
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .ilike('user_code', `${clean}%`)
         .maybeSingle()
-      if (!found) {
-        setMemberError('User not found. Make sure they have created a space first, then share their User ID.')
+      if (profile) { foundId = profile.id; foundName = profile.display_name }
+
+      // Fallback: match UUID prefix in space_members
+      if (!foundId) {
+        const { data: sm } = await supabase
+          .from('space_members')
+          .select('user_id, display_name')
+          .ilike('user_id', `${clean.toLowerCase()}%`)
+          .limit(1)
+          .maybeSingle()
+        if (sm) { foundId = sm.user_id; foundName = sm.display_name }
+      }
+
+      if (!foundId) {
+        setMemberError('User not found. Ask them to open Lista once so their profile is registered.')
         setAddingMember(false); return
       }
-      if (members.some(m => m.user_id === found.user_id)) {
+      if (members.some(m => m.user_id === foundId)) {
         setMemberError('This user is already a member')
         setAddingMember(false); return
       }
       const { error } = await supabase.from('space_members').insert({
-        space_id: space.id, user_id: found.user_id, display_name: found.display_name,
+        space_id: space.id, user_id: foundId, display_name: foundName,
       })
-      if (!error) { setMembers(prev => [...prev, { user_id: found.user_id, display_name: found.display_name }]); setMemberInput('') }
+      if (!error) { setMembers(prev => [...prev, { user_id: foundId, display_name: foundName }]); setMemberInput('') }
       else setMemberError('Could not add member')
     }
     setAddingMember(false)
