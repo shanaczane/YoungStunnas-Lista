@@ -618,6 +618,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
           onSave={handleSpaceSave}
           onDelete={handleSpaceDelete}
           onClose={() => { setShowSettings(false); fetchMembers() }}
+          onMemberClick={name => { setShowSettings(false); openMemberProfile(name) }}
         />
       )}
       {editingTask && (
@@ -858,7 +859,7 @@ function SpaceTaskModal({ task, members, onSave, onDelete, onClose, onMemberClic
 }
 
 // ── Space settings modal ──────────────────────────────────────────────────────
-function SpaceSettingsModal({ space, session, onSave, onDelete, onClose }) {
+function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMemberClick }) {
   const [name, setName] = useState(space.name || '')
   const [description, setDescription] = useState(space.description || '')
   const [color, setColor] = useState(space.color || '#6366F1')
@@ -943,13 +944,21 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose }) {
             <div className="space-y-2 mb-3">
               {members.map(m => (
                 <div key={m.user_id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                    style={{ backgroundColor: color }}>
-                    {(m.display_name || '?')[0].toUpperCase()}
-                  </div>
-                  <span className="text-slate-700 text-sm font-medium flex-1">{m.display_name}</span>
+                  <button
+                    onClick={() => onMemberClick?.(m.display_name)}
+                    className="flex items-center gap-3 flex-1 text-left min-w-0"
+                  >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{ backgroundColor: color }}>
+                      {(m.display_name || '?')[0].toUpperCase()}
+                    </div>
+                    <span className="text-slate-700 text-sm font-medium truncate">{m.display_name}</span>
+                    <svg className="ml-auto flex-shrink-0 text-slate-300" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                  </button>
                   {m.user_id !== session.user.id && (
-                    <button onClick={() => handleRemoveMember(m.user_id)} className="text-slate-300 hover:text-red-400 transition-colors p-1">
+                    <button onClick={() => handleRemoveMember(m.user_id)} className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                       </svg>
