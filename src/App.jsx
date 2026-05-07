@@ -87,7 +87,8 @@ export default function App() {
         .select('user_id').eq('space_id', pendingJoinId).eq('user_id', session.user.id).maybeSingle()
         .then(({ data: existing }) => {
           if (!existing) {
-            return supabase.from('space_members').insert({ space_id: pendingJoinId, user_id: session.user.id, display_name: dn })
+            const av = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+            return supabase.from('space_members').insert({ space_id: pendingJoinId, user_id: session.user.id, display_name: dn, avatar_url: av })
           }
         })
         .then(() => { setPendingJoinId(null); setScreen('spaces') })

@@ -104,7 +104,8 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
   async function handleAcceptInvite(invite) {
     const already = await supabase.from('space_members').select('user_id').eq('space_id', invite.space_id).eq('user_id', session.user.id).maybeSingle()
     if (!already.data) {
-      await supabase.from('space_members').insert({ space_id: invite.space_id, user_id: session.user.id, display_name: displayName })
+      const myAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+      await supabase.from('space_members').insert({ space_id: invite.space_id, user_id: session.user.id, display_name: displayName, avatar_url: myAvatar })
     }
     await supabase.from('space_invites').update({ status: 'accepted' }).eq('id', invite.id)
     setInvites(prev => prev.filter(i => i.id !== invite.id))
@@ -211,7 +212,8 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
     const { data, error } = await supabase
       .from('spaces').insert({ name, description, color, owner_id: session.user.id }).select().single()
     if (!error && data) {
-      await supabase.from('space_members').insert({ space_id: data.id, user_id: session.user.id, display_name: displayName })
+      const myAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+      await supabase.from('space_members').insert({ space_id: data.id, user_id: session.user.id, display_name: displayName, avatar_url: myAvatar })
       const created = { ...data, description, color, space_members: [{ user_id: session.user.id, display_name: displayName }] }
       setSpaces(prev => [created, ...prev])
       openSpace(created)
@@ -425,13 +427,8 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 
   const fetchMembers = useCallback(async () => {
     const { data } = await supabase
-      .from('space_members').select('user_id, display_name').eq('space_id', spaceData.id)
-    if (!data) return
-    const userIds = data.map(m => m.user_id)
-    const { data: profiles } = await supabase.from('profiles').select('id, avatar_url').in('id', userIds)
-    const avatarMap = {}
-    for (const p of profiles || []) avatarMap[p.id] = p.avatar_url
-    setMembers(data.map(m => ({ ...m, avatar_url: avatarMap[m.user_id] || null })))
+      .from('space_members').select('user_id, display_name, avatar_url').eq('space_id', spaceData.id)
+    if (data) setMembers(data)
   }, [spaceData.id])
 
   useEffect(() => {
@@ -1304,15 +1301,8 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
   const [sentInvites, setSentInvites] = useState([])
 
   useEffect(() => {
-    supabase.from('space_members').select('user_id, display_name').eq('space_id', space.id)
-      .then(async ({ data }) => {
-        if (!data) return
-        const userIds = data.map(m => m.user_id)
-        const { data: profiles } = await supabase.from('profiles').select('id, avatar_url').in('id', userIds)
-        const avatarMap = {}
-        for (const p of profiles || []) avatarMap[p.id] = p.avatar_url
-        setMembers(data.map(m => ({ ...m, avatar_url: avatarMap[m.user_id] || null })))
-      })
+    supabase.from('space_members').select('user_id, display_name, avatar_url').eq('space_id', space.id)
+      .then(({ data }) => { if (data) setMembers(data) })
     supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
       .then(({ data }) => { if (data) setSentInvites(data) })
   }, [space.id])
