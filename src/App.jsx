@@ -107,6 +107,11 @@ export default function App() {
     setSelectedTaskId(null)
   }
 
+  async function handleBulkDelete(ids) {
+    await supabase.from('tasks').delete().in('id', ids)
+    setTasks(prev => prev.filter(t => !ids.includes(t.id)))
+  }
+
   function openTask(id) {
     setSelectedTaskId(id)
   }
@@ -157,6 +162,7 @@ export default function App() {
             tasks={tasks}
             categories={categories}
             onTaskCreated={handleTaskCreated}
+            onTaskUpdated={handleTaskUpdated}
             onNavigate={navigateTo}
             onOpenTask={openTask}
             onCategoriesChanged={() => loadCategories(session.user.id)}
@@ -164,6 +170,7 @@ export default function App() {
             onFocusChatConsumed={() => setFocusChat(false)}
             pendingImage={pendingImage}
             onPendingImageConsumed={() => setPendingImage(null)}
+            onBulkDelete={handleBulkDelete}
           />
         )}
         {screen === 'tasks' && (

@@ -4,7 +4,8 @@ import { parseTask } from '../lib/ai'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import { formatDueDate } from '../lib/utils'
-import { getCategoryColor } from '../lib/categories'
+import { getCategoryColor, BUILT_IN_CATEGORIES } from '../lib/categories'
+import { CategoryIcon } from '../lib/icons'
 import mascot from '../mascots/home-mascot.png'
 
 // Space theme colors — pastel only, applied to UI backgrounds/accents (NOT member identity)
@@ -23,23 +24,53 @@ function memberColor(name = '') {
 const CATEGORIES = ['Work','Personal','School','Errands','Health']
 const PINNED_KEY = 'lista_pinned_spaces'
 
+// ── Time formatter ────────────────────────────────────────────────────────────
+function formatActivityTime(date) {
+  if (!date) return null
+  const now = new Date()
+  const diff = now - date
+  if (diff < 60000) return 'Just now'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  const isToday = date.toDateString() === now.toDateString()
+  if (isToday) return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 // ── Spaces list ───────────────────────────────────────────────────────────────
+const ACTIVE_SPACE_KEY = 'lista_active_space'
+
 export default function SpacesScreen({ session, displayName, onNavigate }) {
   const [spaces, setSpaces] = useState([])
   const [activeSpace, setActiveSpace] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editingSpace, setEditingSpace] = useState(null)
+  const [spacePreviews, setSpacePreviews] = useState({})
+  const [spaceTimestamps, setSpaceTimestamps] = useState({})
   const [pinnedIds, setPinnedIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem(PINNED_KEY) || '[]') }
     catch { return [] }
   })
+  const pendingSpaceId = useRef(sessionStorage.getItem(ACTIVE_SPACE_KEY))
 
   useEffect(() => {
     localStorage.setItem(PINNED_KEY, JSON.stringify(pinnedIds))
   }, [pinnedIds])
 
   useEffect(() => { fetchSpaces() }, [session.user.id])
+
+  // Restore active space after spaces load (only if not explicitly closed)
+  useEffect(() => {
+    if (pendingSpaceId.current && spaces.length > 0 && !activeSpace) {
+      const found = spaces.find(s => s.id === pendingSpaceId.current)
+      if (found) {
+        pendingSpaceId.current = null
+        setActiveSpace(found)
+      }
+    }
+  }, [spaces]) // eslint-disable-line
 
   async function fetchSpaces() {
     setLoading(true)
@@ -48,12 +79,56 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
       .select('*, space_members(user_id, display_name)')
       .eq('owner_id', session.user.id)
       .order('created_at', { ascending: false })
-    setSpaces(data || [])
+    const fetched = data || []
+    setSpaces(fetched)
     setLoading(false)
+    const membersMap = {}
+    for (const s of fetched) membersMap[s.id] = s.space_members || []
+    fetchSpacePreviews(fetched, membersMap)
   }
 
-  function togglePin(id, e) {
-    e.stopPropagation()
+  async function fetchSpacePreviews(fetchedSpaces, membersMap) {
+    if (!fetchedSpaces.length) return
+    const spaceIds = fetchedSpaces.map(s => s.id)
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('space_id, task_name, is_complete, created_at, user_id, assignee')
+      .in('space_id', spaceIds)
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (error || !data) return
+    const previews = {}
+    const timestamps = {}
+    for (const spaceId of spaceIds) {
+      const task = data.find(t => t.space_id === spaceId)
+      if (!task) { previews[spaceId] = 'No activity yet'; continue }
+      timestamps[spaceId] = new Date(task.created_at)
+      const members = membersMap[spaceId] || []
+      const validAssignee = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined') ? task.assignee : null
+      const creator = members.find(m => m.user_id === task.user_id)
+      const actor = validAssignee || creator?.display_name || displayName
+      const taskName = task.task_name
+        ? (task.task_name.length > 30 ? task.task_name.slice(0, 30) + '…' : task.task_name)
+        : 'a task'
+      previews[spaceId] = `${actor}: ${taskName}`
+    }
+    setSpacePreviews(previews)
+    setSpaceTimestamps(timestamps)
+  }
+
+  function openSpace(space) {
+    sessionStorage.setItem(ACTIVE_SPACE_KEY, space.id)
+    setActiveSpace(space)
+  }
+
+  function closeSpace() {
+    sessionStorage.removeItem(ACTIVE_SPACE_KEY)
+    pendingSpaceId.current = null
+    setActiveSpace(null)
+    fetchSpaces()
+  }
+
+  function togglePin(id) {
     setPinnedIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [id, ...prev])
   }
 
@@ -71,7 +146,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
       await supabase.from('space_members').insert({ space_id: data.id, user_id: session.user.id, display_name: displayName })
       const created = { ...data, description, color, space_members: [{ user_id: session.user.id, display_name: displayName }] }
       setSpaces(prev => [created, ...prev])
-      setActiveSpace(created)
+      openSpace(created)
     }
     setShowCreate(false)
   }
@@ -82,6 +157,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
     await supabase.from('spaces').delete().eq('id', spaceId)
     setSpaces(prev => prev.filter(s => s.id !== spaceId))
     setPinnedIds(prev => prev.filter(p => p !== spaceId))
+    if (sessionStorage.getItem(ACTIVE_SPACE_KEY) === spaceId) sessionStorage.removeItem(ACTIVE_SPACE_KEY)
     setEditingSpace(null)
   }
 
@@ -92,8 +168,8 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
         session={session}
         displayName={displayName}
         onNavigate={onNavigate}
-        onBack={() => { setActiveSpace(null); fetchSpaces() }}
-        onSpaceDeleted={() => { setActiveSpace(null); fetchSpaces() }}
+        onBack={closeSpace}
+        onSpaceDeleted={closeSpace}
         onSpaceUpdated={updates => setSpaces(prev => prev.map(s => s.id === activeSpace.id ? { ...s, ...updates } : s))}
       />
     )
@@ -146,73 +222,47 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
         ) : spaces.length === 0 ? (
           <EmptySpaces onCreate={() => setShowCreate(true)} />
         ) : (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {sorted.map(space => {
-              const isPinned = pinnedIds.includes(space.id)
-              const memberCount = (space.space_members || []).length
-              const shownMembers = (space.space_members || []).slice(0, 4)
               const spaceColor = space.color || '#818CF8'
-              const cardBg = space.color ? space.color + '18' : '#ffffff'
+              const preview = spacePreviews[space.id]
+              const ts = spaceTimestamps[space.id]
               return (
-                <div key={space.id}>
-                  {isPinned && (
-                    <div className="flex items-center gap-1 mb-1 pl-1">
-                      <PinIcon size={10} filled />
-                      <span className="text-[10px] font-bold text-accent-deep uppercase tracking-wider">Pinned</span>
-                    </div>
-                  )}
+                <div
+                  key={space.id}
+                  className="relative rounded-2xl overflow-hidden"
+                  style={{ backgroundColor: spaceColor + '18', boxShadow: `0 2px 12px ${spaceColor}22` }}
+                >
                   <button
-                    onClick={() => setActiveSpace(space)}
-                    className={`w-full rounded-2xl p-4 card-elevated flex items-center gap-3 text-left transition-all active:scale-[0.99] ${isPinned ? 'ring-1 ring-accent-deep/20' : ''}`}
-                    style={{ backgroundColor: cardBg }}
+                    onClick={() => openSpace(space)}
+                    className="w-full flex items-center gap-3.5 text-left px-4 py-4 pr-10 transition-opacity active:opacity-70"
                   >
+                    {/* Circular group avatar */}
                     <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold flex-shrink-0"
-                      style={{ backgroundColor: spaceColor + '20', color: spaceColor }}
+                      className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-[22px] font-bold flex-shrink-0"
+                      style={{ backgroundColor: spaceColor + '35', color: spaceColor }}
                     >
                       {(space.name || '?')[0].toUpperCase()}
                     </div>
+
+                    {/* Name + timestamp row, then preview */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-slate-900 font-bold text-base truncate">{space.name}</p>
-                        {space.owner_id === session.user.id && (
-                          <span className="text-[10px] text-accent-deep border border-accent-deep/30 bg-accent-pale px-2 py-0.5 rounded-full flex-shrink-0">Owner</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-slate-900 font-bold text-[15px] leading-tight truncate flex-1">{space.name}</p>
+                        {ts && (
+                          <span className="text-slate-500 text-[11px] flex-shrink-0">
+                            {formatActivityTime(ts)}
+                          </span>
                         )}
                       </div>
-                      {space.description && <p className="text-slate-400 text-xs mt-0.5 truncate">{space.description}</p>}
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <div className="flex -space-x-1.5">
-                          {shownMembers.map((m, i) => (
-                            <div key={i} className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
-                              style={{ backgroundColor: memberColor(m.display_name || ''), outline: `2px solid ${cardBg}` }}>
-                              {(m.display_name || '?')[0].toUpperCase()}
-                            </div>
-                          ))}
-                          {memberCount > 4 && (
-                            <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-[7px] font-bold"
-                              style={{ outline: `2px solid ${cardBg}` }}>
-                              +{memberCount - 4}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-slate-400 text-xs">{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                      <button
-                        onClick={e => togglePin(space.id, e)}
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${isPinned ? 'text-accent-deep' : 'text-slate-200 hover:text-slate-400'}`}
-                      >
-                        <PinIcon filled={isPinned} size={14} />
-                      </button>
-                      <button
-                        onClick={() => setEditingSpace(space)}
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-slate-300 hover:text-slate-600 transition-colors"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
-                        </svg>
-                      </button>
+                      <p className="text-slate-500 text-[13px] mt-1 truncate">
+                        {(() => {
+                          const text = preview ?? (space.description || 'No activity yet')
+                          const colonIdx = text.indexOf(': ')
+                          if (colonIdx === -1) return text
+                          return <><span className="font-bold text-slate-700">{text.slice(0, colonIdx)}</span>{text.slice(colonIdx)}</>
+                        })()}
+                      </p>
                     </div>
                   </button>
                 </div>
@@ -248,7 +298,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
     try { return JSON.parse(localStorage.getItem(`lista_mods_${space.id}`) || '{}') }
     catch { return {} }
   })
-  const [viewMode, setViewMode] = useState('list')
+  const [viewMode, setViewMode] = useState(() => sessionStorage.getItem(`lista_viewmode_${space.id}`) || 'list')
   const [inProgressIds, setInProgressIds] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(`lista_kanban_${space.id}`) || '[]')) }
     catch { return new Set() }
@@ -259,6 +309,10 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
     catch { return [] }
   })
   const inputRef = useRef(null)
+
+  useEffect(() => {
+    sessionStorage.setItem(`lista_viewmode_${space.id}`, viewMode)
+  }, [viewMode, space.id])
 
   function openMemberProfile(displayName) {
     if (!displayName) return
@@ -295,9 +349,12 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
     setParseCard(null)
     try {
       const parsed = await parseTask(trimmed)
-      let assignee = parsed.assignee
-      if (assignee) {
-        const match = members.find(m => m.display_name?.toLowerCase().includes(assignee.toLowerCase()))
+      // Only accept AI assignee if it exactly matches a real member and isn't a time/date word
+      const TIME_WORDS = new Set(['today','tomorrow','tom','tonight','morning','afternoon','evening','now','soon','later','monday','tuesday','wednesday','thursday','friday','saturday','sunday','mon','tue','wed','thu','fri','sat','sun'])
+      let assignee = null
+      if (parsed.assignee && !TIME_WORDS.has(parsed.assignee.toLowerCase())) {
+        const needle = parsed.assignee.toLowerCase()
+        const match = members.find(m => m.display_name?.toLowerCase() === needle || m.display_name?.toLowerCase().startsWith(needle + ' '))
         if (match) assignee = match.display_name
       }
       setParseCard({ raw: trimmed, ...parsed, assignee: assignee || displayName })
@@ -306,6 +363,10 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
     } finally {
       setParsing(false)
     }
+  }
+
+  function handleEditField(field, value) {
+    setParseCard(prev => ({ ...prev, [field]: value }))
   }
 
   async function handleConfirm() {
@@ -869,9 +930,69 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
 
   const [taskName, setTaskName] = useState(task.task_name || '')
   const [category, setCategory] = useState(task.category || 'Work')
-  const [assignee, setAssignee] = useState(sanitizedAssignee || creatorName || '')
+  const [assignee, setAssignee] = useState(sanitizedAssignee || '')
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
+  const [notes, setNotes] = useState(task.notes || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [visible, setVisible] = useState(false)
+  const sheetRef = useRef(null)
+  const drag = useRef(null)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  function handleClose() {
+    setVisible(false)
+    setTimeout(onClose, 280)
+  }
+
+  function onDragStart(e) {
+    drag.current = { startY: e.touches[0].clientY, delta: 0 }
+    if (sheetRef.current) sheetRef.current.style.transition = 'none'
+  }
+
+  function onDragMove(e) {
+    if (!drag.current) return
+    const delta = Math.max(0, e.touches[0].clientY - drag.current.startY)
+    drag.current.delta = delta
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${delta}px)`
+  }
+
+  function onDragEnd() {
+    if (!drag.current) return
+    const { delta } = drag.current
+    drag.current = null
+    if (delta > 90) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.28s ease-out'
+        sheetRef.current.style.transform = 'translateY(100%)'
+      }
+      setTimeout(onClose, 280)
+    } else {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.25s ease-out'
+        sheetRef.current.style.transform = 'translateY(0)'
+        setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = '' }, 250)
+      }
+    }
+  }
+
+  const isDirty =
+    taskName !== (task.task_name || '') ||
+    category !== (task.category || 'Work') ||
+    dueDate !== (task.due_date ? task.due_date.slice(0, 16) : '') ||
+    notes !== (task.notes || '') ||
+    assignee !== (sanitizedAssignee || '')
+
+  async function handleSave() {
+    if (!isDirty || !taskName.trim()) return
+    setSaving(true)
+    await onSave({ task_name: taskName.trim(), category, assignee: assignee || null, due_date: dueDate || null, notes })
+    setSaving(false)
+  }
 
   const createdAt = task.created_at ? new Date(task.created_at) : null
   const history = []
@@ -887,37 +1008,65 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
   history.sort((a, b) => a.date - b.date)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full bg-card-bg rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl">
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+    <div
+      className={`fixed inset-0 z-50 flex items-end backdrop-blur-sm transition-colors duration-300 ${visible ? 'bg-black/30' : 'bg-black/0'}`}
+      onClick={e => { if (e.target === e.currentTarget) handleClose() }}
+    >
+      <div
+        ref={sheetRef}
+        className={`w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-divider transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        <div
+          className="flex justify-center pt-3 pb-2 touch-none select-none"
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+        >
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
         </div>
-        <div className="overflow-y-auto flex-1 px-6 pb-4">
-          <div className="flex items-center justify-between mt-2 mb-5">
-            <h2 className="text-slate-900 font-bold text-xl">Edit Task</h2>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
+
+        <div className="overflow-y-auto flex-1 px-5 pb-8">
+          <p className="text-slate-400 text-[11px] mt-2 mb-3">
+            {createdAt
+              ? `Created ${createdAt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · ${createdAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+              : 'Space task'
+            }
+          </p>
+
+          <div className="mb-4">
+            <input
+              autoFocus
+              type="text"
+              value={taskName}
+              onChange={e => setTaskName(e.target.value)}
+              className="w-full bg-transparent text-slate-900 text-xl font-semibold outline-none border-b border-slate-200 focus:border-accent-deep pb-2 transition-colors"
+              placeholder="Task name"
+            />
           </div>
 
           <div className="mb-4">
-            <p className="text-slate-500 text-xs font-semibold mb-1.5 uppercase tracking-wide">Task</p>
-            <input autoFocus type="text" value={taskName} onChange={e => setTaskName(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep transition-colors" />
-          </div>
-
-          <div className="mb-4">
-            <p className="text-slate-500 text-xs font-semibold mb-2 uppercase tracking-wide">Category</p>
-            <div className="flex flex-wrap gap-2">
+            <label className="text-slate-400 text-xs font-medium block mb-1.5">Category</label>
+            <div className="flex gap-2 overflow-x-auto py-1.5 scrollbar-hide -mx-1 px-1">
               {CATEGORIES.map(c => {
                 const col = getCategoryColor(c)
+                const isSelected = category === c
                 return (
-                  <button key={c} onClick={() => setCategory(c)}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-                    style={category === c ? { backgroundColor: col.border, color: '#fff' } : { backgroundColor: col.bg, color: col.text }}>
+                  <button
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={`flex-shrink-0 px-3 py-2 rounded-full text-xs font-semibold transition-all ${isSelected ? '' : 'opacity-60 hover:opacity-90'}`}
+                    style={{
+                      backgroundColor: col.bg,
+                      color: col.text,
+                      ...(isSelected ? { outline: `2px solid ${col.border}`, outlineOffset: '2px' } : {}),
+                    }}
+                  >
                     {c}
+                    {isSelected && (
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="inline ml-1">
+                        <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
                   </button>
                 )
               })}
@@ -925,21 +1074,41 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
           </div>
 
           <div className="mb-4">
-            <p className="text-slate-500 text-xs font-semibold mb-1.5 uppercase tracking-wide">Due Date</p>
-            <input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep transition-colors" />
+            <label className="text-slate-400 text-xs font-medium block mb-1.5">Due Date &amp; Time</label>
+            <input
+              type="datetime-local"
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep transition-colors"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="text-slate-400 text-xs font-medium block mb-1.5">Notes</label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Add notes..."
+              rows={3}
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
+            />
           </div>
 
           <div className="mb-5">
-            <p className="text-slate-500 text-xs font-semibold mb-2 uppercase tracking-wide">Assignee</p>
+            <label className="text-slate-400 text-xs font-medium block mb-1.5">Assignee</label>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setAssignee('')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${!assignee ? 'bg-slate-200 text-slate-700' : 'border border-black/10 text-slate-400'}`}>
+              <button
+                onClick={() => setAssignee('')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${!assignee ? 'bg-slate-200 text-slate-700' : 'border border-black/10 text-slate-400'}`}
+              >
                 Unassigned
               </button>
               {members.map(m => (
-                <button key={m.user_id} onClick={() => setAssignee(m.display_name)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${assignee === m.display_name ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}>
+                <button
+                  key={m.user_id}
+                  onClick={() => setAssignee(m.display_name)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${assignee === m.display_name ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}
+                >
                   {m.display_name}
                 </button>
               ))}
@@ -948,14 +1117,16 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
 
           {history.length > 0 && (
             <div className="mb-5">
-              <p className="text-slate-500 text-xs font-semibold mb-3 uppercase tracking-wide">History</p>
+              <label className="text-slate-400 text-xs font-medium block mb-2">History</label>
               <div className="relative pl-4">
                 <div className="absolute left-3 top-3 bottom-3 w-px bg-slate-100" />
                 <div className="space-y-3">
                   {history.map((ev, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 relative z-10"
-                        style={{ backgroundColor: ev.color }}>
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 relative z-10"
+                        style={{ backgroundColor: ev.color }}
+                      >
                         {ev.icon}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -968,9 +1139,11 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
                         )}
                       </div>
                       {ev.person ? (
-                        <button onClick={() => onMemberClick?.(ev.person)}
+                        <button
+                          onClick={() => onMemberClick?.(ev.person)}
                           className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 transition-transform active:scale-90"
-                          style={{ backgroundColor: memberColor(ev.person) }}>
+                          style={{ backgroundColor: memberColor(ev.person) }}
+                        >
                           {ev.person[0].toUpperCase()}
                         </button>
                       ) : (
@@ -983,28 +1156,32 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
             </div>
           )}
 
-          {confirmDelete ? (
-            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-2">
-              <p className="text-red-600 text-sm font-semibold mb-1">Delete this task?</p>
-              <p className="text-red-400 text-xs mb-3">This cannot be undone.</p>
-              <div className="flex gap-2">
-                <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 rounded-xl border border-red-100 text-slate-500 text-sm font-medium">Cancel</button>
-                <button onClick={onDelete} className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-bold">Delete</button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmDelete(true)} className="text-red-400 text-xs font-medium w-full text-center py-2">
-              Delete Task
+          {isDirty && (
+            <button
+              onClick={handleSave}
+              disabled={saving || !taskName.trim()}
+              className="w-full bg-accent-deep hover:bg-accent-mid text-white py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 mb-3"
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
             </button>
           )}
-        </div>
-        <div className="px-6 pb-8 pt-3 border-t border-black/8 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium">Cancel</button>
+
           <button
-            onClick={() => onSave({ task_name: taskName.trim(), category, assignee: assignee || null, due_date: dueDate || null })}
-            disabled={!taskName.trim()}
-            className="flex-1 py-3 rounded-xl bg-accent-deep text-white text-sm font-bold disabled:opacity-40">
-            Save Changes
+            onClick={() => {
+              if (!confirmDelete) { setConfirmDelete(true); return }
+              onDelete()
+            }}
+            className={`w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+              confirmDelete
+                ? 'bg-red-500 text-white active:bg-red-600'
+                : 'bg-red-50 text-red-500 hover:bg-red-100'
+            }`}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v5"/><path d="M14 11v5"/>
+            </svg>
+            {confirmDelete ? 'Confirm Delete' : 'Delete Task'}
           </button>
         </div>
       </div>
@@ -1018,10 +1195,13 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
   const [description, setDescription] = useState(space.description || '')
   const [color, setColor] = useState(space.color || null)
   const [members, setMembers] = useState(space.space_members || [])
-  const [memberEmail, setMemberEmail] = useState('')
-  const [emailError, setEmailError] = useState('')
+  const [addMode, setAddMode] = useState('email') // 'email' | 'username'
+  const [memberInput, setMemberInput] = useState('')
+  const [memberError, setMemberError] = useState('')
   const [addingMember, setAddingMember] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmRemoveId, setConfirmRemoveId] = useState(null)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => {
     supabase.from('space_members').select('user_id, display_name').eq('space_id', space.id)
@@ -1029,20 +1209,49 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
   }, [space.id])
 
   async function handleAddMember() {
-    const email = memberEmail.trim().toLowerCase()
-    if (!email) return
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setEmailError('Enter a valid email'); return }
+    const val = memberInput.trim()
+    if (!val) return
     setAddingMember(true)
-    const displayName = email.split('@')[0]
-    const { error } = await supabase.from('space_members').insert({
-      space_id: space.id, user_id: crypto.randomUUID(), display_name: displayName,
-    })
-    if (!error) {
-      setMembers(prev => [...prev, { user_id: crypto.randomUUID(), display_name: displayName }])
-      setMemberEmail('')
-      setEmailError('')
+    setMemberError('')
+
+    if (addMode === 'email') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        setMemberError('Enter a valid email address')
+        setAddingMember(false); return
+      }
+      const displayName = val.split('@')[0]
+      if (members.some(m => m.display_name?.toLowerCase() === displayName.toLowerCase())) {
+        setMemberError('This person is already a member')
+        setAddingMember(false); return
+      }
+      const newId = crypto.randomUUID()
+      const { error } = await supabase.from('space_members').insert({
+        space_id: space.id, user_id: newId, display_name: displayName,
+      })
+      if (!error) { setMembers(prev => [...prev, { user_id: newId, display_name: displayName }]); setMemberInput('') }
+      else setMemberError('Could not add member')
     } else {
-      setEmailError('Could not add member')
+      // User ID mode: format LISTA-XXXXXXXX — look up in profiles table
+      const clean = val.toUpperCase().replace(/^LISTA-?/, '').trim()
+      if (clean.length < 6) { setMemberError('Invalid User ID — format: LISTA-XXXXXXXX'); setAddingMember(false); return }
+      const { data: profile, error: profileErr } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .ilike('user_code', `${clean}%`)
+        .maybeSingle()
+      if (profileErr || !profile) {
+        setMemberError('User not found. Ask them to copy their User ID from their Lista profile.')
+        setAddingMember(false); return
+      }
+      if (members.some(m => m.user_id === profile.id)) {
+        setMemberError('This user is already a member')
+        setAddingMember(false); return
+      }
+      const { error } = await supabase.from('space_members').insert({
+        space_id: space.id, user_id: profile.id, display_name: profile.display_name,
+      })
+      if (!error) { setMembers(prev => [...prev, { user_id: profile.id, display_name: profile.display_name }]); setMemberInput('') }
+      else setMemberError('Could not add member')
     }
     setAddingMember(false)
   }
@@ -1050,6 +1259,15 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
   async function handleRemoveMember(userId) {
     await supabase.from('space_members').delete().eq('space_id', space.id).eq('user_id', userId)
     setMembers(prev => prev.filter(m => m.user_id !== userId))
+    setConfirmRemoveId(null)
+  }
+
+  function handleCopyLink() {
+    const url = `${window.location.origin}?join=${space.id}`
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2500)
+    })
   }
 
   return (
@@ -1065,6 +1283,35 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
+            </button>
+          </div>
+
+          {/* Share */}
+          <div className="mb-5 bg-accent-pale border border-accent-light/30 rounded-2xl px-4 py-3.5">
+            <p className="text-accent-deep text-xs font-bold uppercase tracking-wide mb-2">Share Space</p>
+            <p className="text-slate-500 text-xs mb-3 leading-snug">Copy this link and send it to anyone you want to invite to this space.</p>
+            <button
+              onClick={handleCopyLink}
+              className={`w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                linkCopied ? 'bg-green-500 text-white' : 'bg-accent-deep text-white active:bg-accent-mid'
+              }`}
+            >
+              {linkCopied ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Link Copied!
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  Copy Invite Link
+                </>
+              )}
             </button>
           </div>
 
@@ -1102,42 +1349,80 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
             <p className="text-slate-500 text-xs font-semibold mb-3 uppercase tracking-wide">Members</p>
             <div className="space-y-2 mb-3">
               {members.map(m => (
-                <div key={m.user_id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
-                  <button
-                    onClick={() => onMemberClick?.(m.display_name)}
-                    className="flex items-center gap-3 flex-1 text-left min-w-0"
-                  >
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                      style={{ backgroundColor: memberColor(m.display_name || '') }}>
-                      {(m.display_name || '?')[0].toUpperCase()}
-                    </div>
-                    <span className="text-slate-700 text-sm font-medium truncate">{m.display_name}</span>
-                    <svg className="ml-auto flex-shrink-0 text-slate-300" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 18 15 12 9 6"/>
-                    </svg>
-                  </button>
-                  {m.user_id !== session.user.id && (
-                    <button onClick={() => handleRemoveMember(m.user_id)} className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
+                <div key={m.user_id}>
+                  <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
+                    <button
+                      onClick={() => onMemberClick?.(m.display_name)}
+                      className="flex items-center gap-3 flex-1 text-left min-w-0"
+                    >
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                        style={{ backgroundColor: memberColor(m.display_name || '') }}>
+                        {(m.display_name || '?')[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-slate-700 text-sm font-medium truncate">{m.display_name}</p>
+                        {m.user_id === session.user.id && (
+                          <p className="text-slate-400 text-[10px]">You · Owner</p>
+                        )}
+                      </div>
                     </button>
+                    {m.user_id !== session.user.id && confirmRemoveId !== m.user_id && (
+                      <button
+                        onClick={() => setConfirmRemoveId(m.user_id)}
+                        className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                        aria-label="Remove"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <line x1="17" y1="8" x2="23" y2="14"/><line x1="23" y1="8" x2="17" y2="14"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {confirmRemoveId === m.user_id && (
+                    <div className="mt-1 mx-1 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                      <p className="flex-1 text-red-500 text-xs font-medium">Remove {m.display_name}?</p>
+                      <button onClick={() => setConfirmRemoveId(null)} className="text-slate-400 text-xs px-2 py-1 rounded-lg border border-slate-200">Cancel</button>
+                      <button onClick={() => handleRemoveMember(m.user_id)} className="text-white text-xs px-2.5 py-1 rounded-lg bg-red-500 font-semibold">Remove</button>
+                    </div>
                   )}
                 </div>
               ))}
             </div>
+
+            {/* Add member tabs */}
+            <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-2">
+              {[['email', 'Email'], ['userid', 'User ID']].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  onClick={() => { setAddMode(mode); setMemberInput(''); setMemberError('') }}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${addMode === mode ? 'bg-white text-accent-deep shadow-sm' : 'text-slate-400'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {addMode === 'userid' && (
+              <p className="text-slate-400 text-[11px] mb-2 leading-snug">
+                Ask your teammate to copy their User ID from their Lista profile (tap avatar → Profile).
+              </p>
+            )}
             <div className="flex gap-2">
-              <input type="email" value={memberEmail}
-                onChange={e => { setMemberEmail(e.target.value); setEmailError('') }}
+              <input
+                type={addMode === 'email' ? 'email' : 'text'}
+                value={memberInput}
+                onChange={e => { setMemberInput(e.target.value); setMemberError('') }}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddMember() } }}
-                placeholder="Add member by email"
-                className="flex-1 bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors" />
-              <button onClick={handleAddMember} disabled={addingMember}
+                placeholder={addMode === 'email' ? 'teammate@gmail.com' : 'LISTA-XXXXXXXX'}
+                className="flex-1 bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
+              />
+              <button onClick={handleAddMember} disabled={addingMember || !memberInput.trim()}
                 className="px-4 py-2.5 rounded-xl bg-accent-deep text-white text-sm font-semibold disabled:opacity-40 transition-colors">
-                Add
+                {addingMember ? '…' : 'Add'}
               </button>
             </div>
-            {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
+            {memberError && <p className="text-red-500 text-xs mt-1.5">{memberError}</p>}
           </div>
 
           <div className="border-t border-slate-100 pt-4">

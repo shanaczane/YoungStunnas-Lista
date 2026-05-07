@@ -18,6 +18,8 @@ export default function HomeScreen({
   tasks,
   categories,
   onTaskCreated,
+  onTaskUpdated,
+  onBulkDelete,
   onNavigate,
   onOpenTask,
   onCategoriesChanged,
@@ -36,6 +38,9 @@ export default function HomeScreen({
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [scanningImage, setScanningImage] = useState(false)
   const [scanError, setScanError] = useState('')
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkConfirm, setBulkConfirm] = useState(false)
   const inputRef = useRef(null)
   const itemRefs = useRef([])
 
@@ -69,6 +74,26 @@ export default function HomeScreen({
   })
 
   const recent = sortedTasks.slice(0, 5)
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+    setBulkConfirm(false)
+  }
+
+  async function handleBulkDelete() {
+    const ids = [...selectedIds]
+    await onBulkDelete?.(ids)
+    exitSelectMode()
+  }
 
   useEffect(() => {
     if (focusChat) {
@@ -283,6 +308,12 @@ export default function HomeScreen({
               <div className="flex items-center justify-between mb-3">
                 <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Captures</p>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setSelectMode(v => !v); setSelectedIds(new Set()); setBulkConfirm(false) }}
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${selectMode ? 'bg-accent-deep text-white' : 'bg-slate-100 text-slate-500'}`}
+                  >
+                    {selectMode ? 'Cancel' : 'Select'}
+                  </button>
                   <div className="relative">
                     <button
                       onClick={() => setShowSortMenu(v => !v)}
@@ -327,17 +358,34 @@ export default function HomeScreen({
               <div className="space-y-2.5">
                 {recent.map(task => {
                   const catColors = getCategoryColor(task.category, categories)
+                  const isSelected = selectedIds.has(task.id)
                   return (
-                    <button
+                    <div
                       key={task.id}
-                      onClick={() => onOpenTask(task.id)}
-                      className="w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] text-left overflow-hidden"
+                      onClick={() => selectMode ? toggleSelect(task.id) : onOpenTask(task.id)}
+                      className={`w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] cursor-pointer overflow-hidden ${isSelected ? 'ring-2 ring-accent-deep' : ''}`}
                     >
-                      <div
-                        className="w-1 self-stretch shrink-0"
-                        style={{ backgroundColor: catColors?.border }}
-                      />
-                      <div className="flex-1 min-w-0 px-4 py-3.5">
+                      <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: catColors?.border }} />
+                      {/* Checkbox — LEFT side, no button-in-button */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          if (selectMode) toggleSelect(task.id)
+                          else onTaskUpdated?.(task.id, { is_complete: !task.is_complete })
+                        }}
+                        className="w-11 h-11 flex items-center justify-center flex-shrink-0"
+                      >
+                        {selectMode ? (
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-accent-deep border-accent-deep' : 'border-slate-300'}`}>
+                            {isSelected && <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                        ) : (
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${task.is_complete ? 'bg-accent-deep border-accent-deep' : 'border-slate-200'}`}>
+                            {task.is_complete && <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0 py-3.5 pr-4">
                         <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-900'}`}>
                           {task.task_name}
                         </p>
@@ -347,15 +395,9 @@ export default function HomeScreen({
                           <span className="text-slate-400 text-xs font-mono">
                             {task.due_date ? formatDueDate(task.due_date) : 'No due date'}
                           </span>
-                          {isChecklist(task) && (() => {
-                            const items = getChecklistItems(task) || []
-                            const done = items.filter(it => it.done).length
-                            return <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">✓ {done}/{items.length}</span>
-                          })()}
                         </div>
                       </div>
-                      <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0 mr-4" />
-                    </button>
+                    </div>
                   )
                 })}
               </div>
@@ -380,8 +422,54 @@ export default function HomeScreen({
         </div>
       )}
 
+      {/* Bulk action bar — replaces chat input when select mode active */}
+      {selectMode && (
+        <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md">
+          {bulkConfirm ? (
+            <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3.5">
+              <p className="text-red-600 text-sm font-semibold mb-1">
+                Delete {selectedIds.size} task{selectedIds.size !== 1 ? 's' : ''}?
+              </p>
+              <p className="text-red-400 text-xs mb-3">This cannot be undone.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setBulkConfirm(false)} className="flex-1 py-2 rounded-xl border border-red-100 text-slate-500 text-sm font-medium">Cancel</button>
+                <button onClick={handleBulkDelete} className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-bold">Delete</button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-card-bg rounded-2xl border border-divider card-elevated px-3 py-2.5 flex items-center gap-2">
+              <span className="text-slate-400 text-xs font-medium flex-shrink-0 min-w-[56px]">
+                {selectedIds.size} selected
+              </span>
+              <button
+                onClick={() => setSelectedIds(new Set(recent.map(t => t.id)))}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold"
+              >All</button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold"
+              >None</button>
+              <div className="flex-1" />
+              <button
+                onClick={() => { if (selectedIds.size > 0) setBulkConfirm(true) }}
+                disabled={selectedIds.size === 0}
+                className="px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-semibold disabled:opacity-40 flex items-center gap-1.5"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
+                </svg>
+                Delete{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+              </button>
+              <button onClick={exitSelectMode} className="px-2.5 py-1.5 rounded-xl border border-black/10 text-slate-500 text-xs font-semibold">
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Bottom fixed area: parse card + chat input stacked */}
-      <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
+      {!selectMode && <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
           <div className="bg-card-bg rounded-2xl p-4 card-elevated-lg animate-slide-up">
             <div className="flex items-center justify-between mb-3">
@@ -597,7 +685,7 @@ export default function HomeScreen({
             )}
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
