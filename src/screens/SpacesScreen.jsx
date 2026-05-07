@@ -246,22 +246,23 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-app-bg">
+    <div className="flex flex-col h-screen overflow-hidden bg-app-bg">
       <ScreenHeader>
-        <div>
-          <h1 className="text-slate-900 font-bold text-2xl">Spaces</h1>
+        <div className="min-w-0">
+          <h1 className="text-slate-900 font-bold text-[22px] leading-tight">Spaces</h1>
           <p className="text-slate-400 text-xs mt-0.5">Collaborate with your team</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-black/15 text-slate-700 text-xs font-semibold transition-colors active:bg-slate-50"
+            className="w-10 h-10 sm:w-auto sm:h-auto flex items-center justify-center gap-1.5 sm:px-3.5 sm:py-2 rounded-full sm:rounded-xl bg-white border border-black/15 text-slate-700 text-xs font-semibold transition-colors active:bg-slate-50"
             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+            aria-label="Create Space"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Create Space
+            <span className="hidden sm:inline">Create Space</span>
           </button>
           <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
         </div>
@@ -285,13 +286,13 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
         />
       )}
 
-      <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4">
+      <div className="flex-1 overflow-y-auto px-4 pb-24 pt-3">
         {/* Pending invites */}
         {invites.length > 0 && (
           <div className="flex flex-col gap-2.5 mb-4">
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Pending Invites</p>
             {invites.map(invite => (
-              <div key={invite.id} className="rounded-2xl bg-accent-pale border border-accent-light/40 px-4 py-3.5 flex items-center gap-3">
+              <div key={invite.id} className="rounded-2xl bg-accent-pale border border-accent-light/40 px-3.5 py-3.5 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-accent-deep/10 flex items-center justify-center text-accent-deep font-bold text-lg flex-shrink-0">
                   {(invite.space_name || '?')[0].toUpperCase()}
                 </div>
@@ -299,7 +300,7 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
                   <p className="text-slate-900 font-bold text-sm truncate">{invite.space_name}</p>
                   <p className="text-slate-500 text-xs">{invite.invited_by_name} invited you</p>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row gap-1.5 flex-shrink-0">
                   <button
                     onClick={() => handleDeclineInvite(invite)}
                     className="px-3 py-1.5 rounded-xl border border-black/10 text-slate-500 text-xs font-semibold"
@@ -321,7 +322,7 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
         ) : spaces.length === 0 && invites.length === 0 ? (
           <EmptySpaces onCreate={() => setShowCreate(true)} />
         ) : spaces.length === 0 ? null : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2.5">
             {sorted.map(space => {
               const spaceColor = space.color || '#818CF8'
               const preview = spacePreviews[space.id]
@@ -329,16 +330,16 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
               return (
                 <div
                   key={space.id}
-                  className="relative rounded-2xl overflow-hidden"
+                  className="relative rounded-2xl overflow-hidden border border-white/60"
                   style={{ backgroundColor: spaceColor + '18', boxShadow: `0 2px 12px ${spaceColor}22` }}
                 >
                   <button
                     onClick={() => openSpace(space)}
-                    className="w-full flex items-center gap-3.5 text-left px-4 py-4 pr-10 transition-opacity active:opacity-70"
+                    className="w-full flex items-center gap-3.5 text-left px-3.5 py-3.5 transition-opacity active:opacity-70"
                   >
                     {/* Circular group avatar */}
                     <div
-                      className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-[22px] font-bold flex-shrink-0"
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
                       style={{ backgroundColor: spaceColor + '35', color: spaceColor }}
                     >
                       {(space.name || '?')[0].toUpperCase()}
@@ -619,25 +620,25 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
   const boardBg = spaceData.color ? spaceData.color + '18' : undefined
 
   return (
-    <div className={`flex flex-col min-h-screen ${!spaceData.color ? 'bg-app-bg' : ''}`}
+    <div className={`flex flex-col h-screen overflow-hidden ${!spaceData.color ? 'bg-app-bg' : ''}`}
       style={boardBg ? { backgroundColor: boardBg } : undefined}>
-      <ScreenHeader className="px-5 pt-6 pb-3">
-        <button onClick={onBack} className="flex items-center gap-1 text-accent-deep text-sm font-medium mb-3">
+      <ScreenHeader className="px-4 pt-5 pb-3">
+        <button onClick={onBack} className="flex items-center gap-1 text-accent-deep text-sm font-medium mb-3 active:opacity-70">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M15 18l-6-6 6-6"/>
           </svg>
           All Spaces
         </button>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0"
+              className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg font-bold flex-shrink-0"
               style={{ backgroundColor: spaceColor + '20', color: spaceColor }}
             >
               {(spaceData.name || '?')[0].toUpperCase()}
             </div>
             <div className="min-w-0">
-              <h1 className="text-slate-900 font-bold text-xl truncate">{spaceData.name}</h1>
+              <h1 className="text-slate-900 font-bold text-[20px] leading-tight truncate">{spaceData.name}</h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <div className="flex -space-x-1">
                   {members.slice(0, 5).map((m, i) => (
@@ -654,7 +655,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={() => setShowDetails(true)}
-              className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+              className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-colors"
               title="Space Details"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -663,7 +664,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             </button>
             <button
               onClick={() => setShowActivity(v => !v)}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${showActivity ? 'bg-accent-pale text-accent-deep' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${showActivity ? 'bg-accent-pale text-accent-deep' : 'bg-slate-100 text-slate-500 active:bg-slate-200'}`}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -671,30 +672,33 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             </button>
             <button
               onClick={() => setShowSettings(true)}
-              className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+              className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-colors"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
               </svg>
             </button>
-            <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
+            <div className="hidden sm:block">
+              <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
+            </div>
           </div>
         </div>
       </ScreenHeader>
 
       {/* Filter row */}
       <div className="relative">
-        <div className="px-5 pb-2 flex items-center gap-2">
+        <div className="px-4 pb-2 flex items-center gap-2">
           <button
             onClick={() => setShowFilterBar(v => !v)}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${activeFilterCount > 0 ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}
+            className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${activeFilterCount > 0 ? 'bg-accent-deep text-white' : 'bg-white border border-black/10 text-slate-400'}`}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
             </svg>
           </button>
-          <div className="flex items-center gap-1 bg-slate-100/80 rounded-full p-1">
+          <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+          <div className="inline-flex items-center gap-1 bg-slate-100/80 rounded-full p-1 min-w-max">
             {[
               { id: 'list',    label: 'List',    icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
               { id: 'kanban',  label: 'Kanban',  icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="5" height="18" rx="1"/></svg> },
@@ -702,13 +706,13 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
               { id: 'members', label: 'Members', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
             ].map(v => (
               <button key={v.id} onClick={() => setViewMode(v.id)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${viewMode === v.id ? 'bg-white text-accent-deep shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${viewMode === v.id ? 'bg-white text-accent-deep shadow-sm' : 'text-slate-400 active:text-slate-600'}`}>
                 {v.icon}{v.label}
               </button>
             ))}
           </div>
-          <div className="flex-1" />
-          <span className="text-slate-300 text-xs">{displayed.length} task{displayed.length !== 1 ? 's' : ''}</span>
+          </div>
+          <span className="hidden sm:inline text-slate-300 text-xs">{displayed.length} task{displayed.length !== 1 ? 's' : ''}</span>
         </div>
 
       {/* Expanded filters — floats over task list */}
@@ -777,15 +781,13 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 
       {/* Task list / Kanban / Table / Members */}
       {viewMode === 'kanban' ? (
-        <div className="flex-1 overflow-x-auto overflow-y-auto pb-44 pt-2">
+        <div className="flex-1 overflow-y-auto md:overflow-x-auto pb-44 pt-2">
           <KanbanView
             tasks={displayed}
             members={members}
-            spaceColor={spaceColor}
             themeColor={spaceData.color}
             inProgressIds={inProgressIds}
             modifications={modifications}
-            onToggle={handleToggle}
             onClick={task => setEditingTask(task)}
             onMemberClick={openMemberProfile}
             onStatusChange={handleStatusChange}
@@ -793,7 +795,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
           />
         </div>
       ) : viewMode === 'table' ? (
-        <div className="flex-1 overflow-auto pb-44">
+        <div className="flex-1 overflow-y-auto pb-44">
           <TableView
             tasks={displayed}
             members={members}
@@ -820,7 +822,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
           />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-5 pb-44 space-y-2.5">
+        <div className="flex-1 overflow-y-auto px-4 pb-44 space-y-2.5">
           {displayed.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[25vh] text-center">
               <p className="text-slate-400 text-sm font-medium">No tasks</p>
@@ -2158,7 +2160,7 @@ const KANBAN_COLS = [
   { id: 'done',       label: 'Done',         color: '#10b981' },
 ]
 
-function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, modifications, onToggle, onClick, onMemberClick, onStatusChange, onDrop }) {
+function KanbanView({ tasks, members, themeColor, inProgressIds, modifications, onClick, onMemberClick, onStatusChange, onDrop }) {
   const [draggedTask, setDraggedTask] = useState(null)
   const [draggedFrom, setDraggedFrom] = useState(null)
   const [dragOverCol, setDragOverCol] = useState(null)
@@ -2201,24 +2203,24 @@ function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, mod
   }
 
   return (
-    <div className="flex gap-3 px-4 pb-4" style={{ minWidth: `${KANBAN_COLS.length * 288 + 32}px` }}>
+    <div className="flex flex-col md:flex-row gap-3 px-4 pb-4 md:min-w-[896px]">
       {KANBAN_COLS.map(col => {
         const isOver = dragOverCol === col.id && draggedFrom !== col.id
         return (
           <div
             key={col.id}
-            className="flex-shrink-0 w-72 flex flex-col rounded-2xl transition-all duration-200"
+            className="w-full md:w-72 md:flex-shrink-0 flex flex-col rounded-2xl bg-white/45 border border-white/60 transition-all duration-200 overflow-hidden"
             style={isOver ? { backgroundColor: col.color + '14' } : undefined}
             onDragOver={e => onColDragOver(e, col.id)}
             onDragLeave={onColDragLeave}
             onDrop={e => onColDrop(e, col.id)}
           >
-            <div className="flex items-center gap-2 px-1 py-2 mb-1">
+            <div className="flex items-center gap-2 px-3 py-3 border-b border-black/6">
               <div className="w-2.5 h-2.5 rounded-full transition-transform duration-150" style={{ backgroundColor: col.color, transform: isOver ? 'scale(1.3)' : 'scale(1)' }} />
               <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">{col.label}</span>
               <span className="ml-auto text-[10px] font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{cols[col.id].length}</span>
             </div>
-            <div className={`flex flex-col gap-2 flex-1 min-h-[100px] rounded-xl p-1.5 transition-all duration-200 ${isOver ? 'ring-2 ring-dashed' : ''}`}
+            <div className={`flex flex-col gap-2 flex-1 min-h-[88px] p-2.5 transition-all duration-200 ${isOver ? 'ring-2 ring-dashed' : ''}`}
               style={isOver ? { ringColor: col.color + '60' } : undefined}>
               {cols[col.id].map(task => (
                 <KanbanCard
@@ -2229,13 +2231,14 @@ function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, mod
                   onClick={() => !draggedTask && onClick(task)}
                   onMemberClick={onMemberClick}
                   onStatusChange={newStatus => onStatusChange(task, newStatus)}
+                  onMove={newStatus => onDrop?.(task, newStatus)}
                   onDragStart={() => onCardDragStart(task, col.id)}
                   onDragEnd={onCardDragEnd}
                 />
               ))}
               {cols[col.id].length === 0 && (
                 <div
-                  className={`flex-1 border-2 border-dashed rounded-2xl flex items-center justify-center py-8 transition-all duration-200 ${isOver ? 'border-current scale-[1.01]' : 'border-slate-100'}`}
+                  className={`flex-1 border-2 border-dashed rounded-2xl flex items-center justify-center py-6 transition-all duration-200 ${isOver ? 'border-current scale-[1.01]' : 'border-slate-100'}`}
                   style={isOver ? { borderColor: col.color + '80', backgroundColor: col.color + '10' } : undefined}
                 >
                   <p className="text-xs font-medium" style={isOver ? { color: col.color } : { color: '#cbd5e1' }}>
@@ -2258,7 +2261,7 @@ function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, mod
   )
 }
 
-function KanbanCard({ task, members, themeColor, columnId, modification, onClick, onMemberClick, onStatusChange, isDragging, onDragStart, onDragEnd }) {
+function KanbanCard({ task, members, themeColor, columnId, modification, onClick, onMemberClick, onStatusChange, onMove, isDragging, onDragStart, onDragEnd }) {
   const [showStatus, setShowStatus] = useState(false)
   const colors = getCategoryColor(task.category)
   const creator = members.find(m => m.user_id === task.user_id)
@@ -2272,24 +2275,24 @@ function KanbanCard({ task, members, themeColor, columnId, modification, onClick
       draggable
       onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', task.id); onDragStart?.() }}
       onDragEnd={onDragEnd}
-      className={`rounded-2xl p-3 card-elevated transition-all duration-200 select-none ${
+      className={`rounded-2xl p-3 card-elevated transition-all duration-200 select-none touch-manipulation ${
         isDragging
           ? 'opacity-40 scale-95 rotate-1 cursor-grabbing shadow-xl'
-          : 'cursor-grab active:cursor-grabbing active:scale-[0.98] hover:shadow-lg'
+          : 'cursor-grab active:cursor-grabbing active:scale-[0.98] md:hover:shadow-lg'
       }`}
       style={{ backgroundColor: themeColor ? themeColor + '28' : '#ffffff' }}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <button
           onClick={e => { e.stopPropagation(); setShowStatus(v => !v) }}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+          className="min-h-6 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
           style={{ backgroundColor: currentCol?.color }}
         >
           {currentCol?.label}
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
-        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: colors.bg, color: colors.text }}>
+        <span className="min-w-0 truncate text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: colors.bg, color: colors.text }}>
           {task.category}
         </span>
       </div>
@@ -2305,7 +2308,7 @@ function KanbanCard({ task, members, themeColor, columnId, modification, onClick
           ))}
         </div>
       )}
-      <p className={`text-sm font-semibold leading-tight mb-1.5 ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
+      <p className={`text-sm font-semibold leading-tight mb-1.5 break-words ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
         {task.task_name}
       </p>
       {modification && (
@@ -2322,14 +2325,29 @@ function KanbanCard({ task, members, themeColor, columnId, modification, onClick
           </p>
         </div>
       )}
-      <div className="flex items-end justify-between">
-        <div>
+      <div className="md:hidden mb-2 pt-2 border-t border-black/8">
+        <p className="text-[9px] font-bold uppercase tracking-wide text-slate-300 mb-1.5">Move to</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {KANBAN_COLS.filter(c => c.id !== columnId).map(c => (
+            <button
+              key={c.id}
+              onClick={e => { e.stopPropagation(); onMove?.(c.id) }}
+              className="min-h-8 rounded-xl px-2 text-[10px] font-bold text-white active:scale-[0.98] transition-transform"
+              style={{ backgroundColor: c.color }}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
           {task.due_date && <p className="text-[10px] text-slate-400">{formatDueDate(task.due_date)}</p>}
           <p className="text-[9px] text-slate-300 mt-0.5">
             {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center flex-shrink-0">
           {assignee && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(assignee) }}
               className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white"
@@ -2538,38 +2556,216 @@ function MemberTaskCard({ task, members, inProgressIds, modification, themeColor
 function TableView({ tasks, members, themeColor, inProgressIds, modifications, onToggle, onClick, onMemberClick, onStatusChange }) {
   const headerBg = themeColor ? themeColor + '30' : '#f8fafc'
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse" style={{ minWidth: '700px' }}>
-        <thead>
-          <tr style={{ backgroundColor: headerBg }}>
-            {['', 'Task', 'Status', 'Assignee', 'Reporter', 'Created', 'Updated', 'Due'].map((h, i) => (
-              <th key={i} className={`py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8 ${i === 0 ? 'w-10 px-4' : 'px-3'}`}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.length === 0 ? (
-            <tr>
-              <td colSpan={8} className="py-16 text-center text-slate-300 text-sm">No tasks</td>
+    <div className="px-4 pt-2">
+      <div className="md:hidden overflow-visible rounded-2xl bg-card-bg card-elevated">
+        <table className="w-full table-fixed border-collapse">
+          <thead>
+            <tr style={{ backgroundColor: headerBg }}>
+              <th className="w-10 px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8"></th>
+              <th className="px-1 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8">Task</th>
+              <th className="w-[78px] px-1 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8">Status</th>
+              <th className="w-[58px] px-2 py-2.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8">Due</th>
             </tr>
-          ) : tasks.map(task => (
-            <TableRow
-              key={task.id}
-              task={task}
-              members={members}
-              themeColor={themeColor}
-              columnId={task.is_complete ? 'done' : inProgressIds.has(task.id) ? 'inprogress' : 'todo'}
-              modification={modifications?.[task.id] || null}
-              onToggle={() => onToggle(task)}
-              onClick={() => onClick(task)}
-              onMemberClick={onMemberClick}
-              onStatusChange={newStatus => onStatusChange(task, newStatus)}
-            />
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tasks.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-16 text-center text-slate-300 text-sm">No tasks</td>
+              </tr>
+            ) : tasks.map(task => (
+              <MobileTableRow
+                key={task.id}
+                task={task}
+                members={members}
+                themeColor={themeColor}
+                columnId={task.is_complete ? 'done' : inProgressIds.has(task.id) ? 'inprogress' : 'todo'}
+                modification={modifications?.[task.id] || null}
+                onToggle={() => onToggle(task)}
+                onClick={() => onClick(task)}
+                onMemberClick={onMemberClick}
+                onStatusChange={newStatus => onStatusChange(task, newStatus)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="hidden md:block overflow-x-auto rounded-2xl bg-card-bg card-elevated">
+        <table className="w-full border-collapse" style={{ minWidth: '700px' }}>
+          <thead>
+            <tr style={{ backgroundColor: headerBg }}>
+              {['', 'Task', 'Status', 'Assignee', 'Reporter', 'Created', 'Updated', 'Due'].map((h, i) => (
+                <th key={i} className={`py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8 ${i === 0 ? 'w-10 px-4' : 'px-3'}`}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-16 text-center text-slate-300 text-sm">No tasks</td>
+              </tr>
+            ) : tasks.map(task => (
+              <TableRow
+                key={task.id}
+                task={task}
+                members={members}
+                themeColor={themeColor}
+                columnId={task.is_complete ? 'done' : inProgressIds.has(task.id) ? 'inprogress' : 'todo'}
+                modification={modifications?.[task.id] || null}
+                onToggle={() => onToggle(task)}
+                onClick={() => onClick(task)}
+                onMemberClick={onMemberClick}
+                onStatusChange={newStatus => onStatusChange(task, newStatus)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function MobileTableRow({ task, members, themeColor, columnId, modification, onToggle, onClick, onMemberClick, onStatusChange }) {
+  const [showStatus, setShowStatus] = useState(false)
+  const colors = getCategoryColor(task.category)
+  const creator = members.find(m => m.user_id === task.user_id)
+  const creatorName = creator?.display_name || null
+  const rawAssignee = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined') ? task.assignee : null
+  const assignee = rawAssignee || creatorName
+  const currentCol = KANBAN_COLS.find(c => c.id === columnId)
+  const updatedAt = modification?.at || task.updated_at || task.created_at
+  const isOverdue = task.due_date && !task.is_complete && new Date(task.due_date) < new Date()
+
+  return (
+    <tr className="border-b border-black/[0.04]">
+      <td colSpan={4} className="p-0">
+        <div
+          onClick={onClick}
+          className="relative overflow-visible bg-card-bg transition-all active:bg-slate-50"
+          style={themeColor ? { backgroundColor: themeColor + '18' } : {}}
+        >
+      <div className="flex items-start gap-3 px-3.5 py-3.5">
+        <button
+          onClick={e => { e.stopPropagation(); onToggle() }}
+          className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+            task.is_complete ? 'bg-emerald-500 border-emerald-500' : 'border-slate-200'
+          }`}
+          aria-label={task.is_complete ? 'Mark incomplete' : 'Mark complete'}
+        >
+          {task.is_complete && (
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className={`min-w-0 text-[15px] font-bold leading-snug ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-900'}`}>
+              {task.task_name}
+            </p>
+            <div className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => setShowStatus(v => !v)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-white whitespace-nowrap"
+                style={{ backgroundColor: currentCol?.color }}
+              >
+                {currentCol?.label}
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              {showStatus && (
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-xl border border-black/8 overflow-hidden min-w-[128px]">
+                  {KANBAN_COLS.filter(c => c.id !== columnId).map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => { onStatusChange(c.id); setShowStatus(false) }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left active:bg-slate-50 transition-colors"
+                    >
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                      <span className="text-xs font-medium text-slate-700">{c.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span
+              className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold"
+              style={{ backgroundColor: colors.bg, color: colors.text }}
+            >
+              {task.category}
+            </span>
+            {task.due_date && (
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold ${isOverdue ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-500'}`}>
+                {formatDueDate(task.due_date)}
+              </span>
+            )}
+            {modification && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold text-purple-500 bg-purple-50">
+                Modified
+              </span>
+            )}
+          </div>
+
+          {modification && (
+            <p className="text-purple-400 text-[10px] mt-1.5 line-clamp-1">
+              {modification.changes.map(c => typeof c === 'object' ? `${c.field} -> "${c.to}"` : c).join(' · ')}
+            </p>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <MobilePersonCell label="Assignee" name={assignee} members={members} onMemberClick={onMemberClick} />
+            <MobilePersonCell label="Reporter" name={creatorName} members={members} onMemberClick={onMemberClick} />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-black/8 pt-2.5">
+            <MobileDate label="Created" date={task.created_at} />
+            <MobileDate label="Updated" date={updatedAt} />
+            <div className="text-right">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-slate-300">Due</p>
+              <p className={`text-[11px] font-semibold ${isOverdue ? 'text-red-400' : 'text-slate-500'}`}>
+                {task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'None'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+function MobilePersonCell({ label, name, members, onMemberClick }) {
+  return (
+    <div className="min-w-0 rounded-xl bg-white/60 border border-black/6 px-2.5 py-2">
+      <p className="text-[9px] font-bold uppercase tracking-wide text-slate-300 mb-1">{label}</p>
+      {name ? (
+        <button
+          onClick={e => { e.stopPropagation(); onMemberClick?.(name) }}
+          className="flex items-center gap-1.5 min-w-0 max-w-full"
+        >
+          <MemberAvatar name={name} avatarUrl={getMemberAvatar(name, members)} sizePx={22} fontSize={9} />
+          <span className="text-xs font-semibold text-slate-600 truncate">{name}</span>
+        </button>
+      ) : (
+        <span className="text-xs text-slate-300">Unassigned</span>
+      )}
+    </div>
+  )
+}
+
+function MobileDate({ label, date }) {
+  return (
+    <div>
+      <p className="text-[9px] font-bold uppercase tracking-wide text-slate-300">{label}</p>
+      <p className="text-[11px] font-semibold text-slate-500">
+        {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      </p>
     </div>
   )
 }
