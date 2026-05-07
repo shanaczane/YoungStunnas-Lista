@@ -64,11 +64,12 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
   useEffect(() => { fetchSpaces(); fetchInvites() }, [session.user.id])
 
   async function fetchInvites() {
+    const email = session.user.email || ''
     const { data } = await supabase
       .from('space_invites')
       .select('*')
-      .eq('user_code', myCode)
       .eq('status', 'pending')
+      .or(`user_code.eq.${myCode},invited_email.eq.${email}`)
       .order('created_at', { ascending: false })
     if (data) setInvites(data)
   }
@@ -1272,10 +1273,13 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmRemoveId, setConfirmRemoveId] = useState(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [sentInvites, setSentInvites] = useState([])
 
   useEffect(() => {
     supabase.from('space_members').select('user_id, display_name').eq('space_id', space.id)
       .then(({ data }) => { if (data) setMembers(data) })
+    supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
+      .then(({ data }) => { if (data) setSentInvites(data) })
   }, [space.id])
 
   async function handleAddMember() {
@@ -1289,17 +1293,22 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
         setMemberError('Enter a valid email address')
         setAddingMember(false); return
       }
-      const displayName = val.split('@')[0]
-      if (members.some(m => m.display_name?.toLowerCase() === displayName.toLowerCase())) {
-        setMemberError('This person is already a member')
-        setAddingMember(false); return
-      }
-      const newId = crypto.randomUUID()
-      const { error } = await supabase.from('space_members').insert({
-        space_id: space.id, user_id: newId, display_name: displayName,
+      const senderName = displayName || session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'Someone'
+      const { error } = await supabase.from('space_invites').insert({
+        space_id: space.id,
+        space_name: space.name,
+        invited_by_name: senderName,
+        user_code: '',
+        invited_email: val.toLowerCase(),
+        status: 'pending',
       })
-      if (!error) { setMembers(prev => [...prev, { user_id: newId, display_name: displayName }]); setMemberInput('') }
-      else setMemberError('Could not add member')
+      if (!error) {
+        setMemberInput('')
+        setMemberSuccess(`Invite sent to ${val}! They'll see it when they open Lista.`)
+        setTimeout(() => setMemberSuccess(''), 3000)
+      } else {
+        setMemberError('Could not send invite.')
+      }
     } else {
       // User ID mode: send invite — they'll see it on their Spaces page
       const clean = val.replace(/^LISTA-?/i, '').trim().toUpperCase()
@@ -1455,6 +1464,23 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
                       <button onClick={() => handleRemoveMember(m.user_id)} className="text-white text-xs px-2.5 py-1 rounded-lg bg-red-500 font-semibold">Remove</button>
                     </div>
                   )}
+                </div>
+              ))}
+              {/* Pending invites sent from this space */}
+              {sentInvites.map(inv => (
+                <div key={inv.id} className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 text-sm font-bold flex-shrink-0">?</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700 text-sm font-medium truncate">{inv.invited_email || `LISTA-${inv.user_code}`}</p>
+                    <p className="text-amber-500 text-[10px]">Invite pending</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await supabase.from('space_invites').update({ status: 'declined' }).eq('id', inv.id)
+                      setSentInvites(prev => prev.filter(i => i.id !== inv.id))
+                    }}
+                    className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0 text-xs"
+                  >✕</button>
                 </div>
               ))}
             </div>
