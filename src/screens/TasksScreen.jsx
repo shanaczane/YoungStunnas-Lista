@@ -469,6 +469,8 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error,  setError]  = useState('')
   const [visible, setVisible] = useState(false)
+  const sheetRef = useRef(null)
+  const drag = useRef(null)
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true))
@@ -476,8 +478,40 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
   }, [])
 
   function handleClose(cb) {
+    if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
     setVisible(false)
     setTimeout(cb, 280)
+  }
+
+  function onDragStart(e) {
+    drag.current = { startY: e.touches[0].clientY, delta: 0 }
+    if (sheetRef.current) sheetRef.current.style.transition = 'none'
+  }
+
+  function onDragMove(e) {
+    if (!drag.current) return
+    const delta = Math.max(0, e.touches[0].clientY - drag.current.startY)
+    drag.current.delta = delta
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${delta}px)`
+  }
+
+  function onDragEnd(fallbackCb) {
+    if (!drag.current) return
+    const { delta } = drag.current
+    drag.current = null
+    if (delta < 8 || delta > 90) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.28s ease-out'
+        sheetRef.current.style.transform = 'translateY(100%)'
+      }
+      setTimeout(fallbackCb, 280)
+    } else {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.25s ease-out'
+        sheetRef.current.style.transform = 'translateY(0)'
+        setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = '' }, 250)
+      }
+    }
   }
 
   async function handleSave() {
@@ -529,7 +563,15 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
         else handleClose(onCancel)
       }}
     >
-      <div className={`w-full bg-card-bg rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div ref={sheetRef} className={`w-full bg-card-bg rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div
+          className="flex justify-center -mt-2 mb-4 touch-none select-none"
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={() => onDragEnd(onCancel)}
+        >
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
+        </div>
         <h2 className="text-slate-900 font-bold text-lg mb-5">
           {isEditing ? 'Edit Category' : 'New Category'}
         </h2>
@@ -613,7 +655,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
 
         <div className="flex gap-3">
           <button
-            onClick={onCancel}
+            onClick={() => handleClose(onCancel)}
             disabled={saving || deleting}
             className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium"
           >
@@ -659,6 +701,8 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
 function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm }) {
   const taskCount = category.taskCount || 0
   const [visible, setVisible] = useState(false)
+  const sheetRef = useRef(null)
+  const drag = useRef(null)
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true))
@@ -666,8 +710,40 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
   }, [])
 
   function handleClose() {
+    if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
     setVisible(false)
     setTimeout(onCancel, 280)
+  }
+
+  function onDragStart(e) {
+    drag.current = { startY: e.touches[0].clientY, delta: 0 }
+    if (sheetRef.current) sheetRef.current.style.transition = 'none'
+  }
+
+  function onDragMove(e) {
+    if (!drag.current) return
+    const delta = Math.max(0, e.touches[0].clientY - drag.current.startY)
+    drag.current.delta = delta
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${delta}px)`
+  }
+
+  function onDragEnd() {
+    if (!drag.current) return
+    const { delta } = drag.current
+    drag.current = null
+    if (delta > 90) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.28s ease-out'
+        sheetRef.current.style.transform = 'translateY(100%)'
+      }
+      setTimeout(onCancel, 280)
+    } else {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.25s ease-out'
+        sheetRef.current.style.transform = 'translateY(0)'
+        setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = '' }, 250)
+      }
+    }
   }
 
   return (
@@ -675,7 +751,15 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
       className={`fixed inset-0 z-60 flex items-end backdrop-blur-sm transition-colors duration-300 ${visible ? 'bg-black/50' : 'bg-black/0'}`}
       onClick={e => { if (e.target === e.currentTarget && !deleting) handleClose() }}
     >
-      <div className={`w-full bg-card-bg rounded-t-3xl p-6 shadow-2xl transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div ref={sheetRef} className={`w-full bg-card-bg rounded-t-3xl p-6 shadow-2xl transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div
+          className="flex justify-center -mt-2 mb-4 touch-none select-none"
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+        >
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
+        </div>
         <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 6h18"/>

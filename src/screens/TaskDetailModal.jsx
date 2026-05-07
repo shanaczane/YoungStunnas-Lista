@@ -26,6 +26,8 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   const [newCatInput, setNewCatInput] = useState('')
   const [visible, setVisible] = useState(false)
   const itemRefs = useRef([])
+  const sheetRef = useRef(null)
+  const drag = useRef(null)
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true))
@@ -33,8 +35,40 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   }, [])
 
   function handleClose() {
+    if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
     setVisible(false)
     setTimeout(onClose, 280)
+  }
+
+  function onDragStart(e) {
+    drag.current = { startY: e.touches[0].clientY, delta: 0 }
+    if (sheetRef.current) sheetRef.current.style.transition = 'none'
+  }
+
+  function onDragMove(e) {
+    if (!drag.current) return
+    const delta = Math.max(0, e.touches[0].clientY - drag.current.startY)
+    drag.current.delta = delta
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${delta}px)`
+  }
+
+  function onDragEnd() {
+    if (!drag.current) return
+    const { delta } = drag.current
+    drag.current = null
+    if (delta < 8 || delta > 90) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.28s ease-out'
+        sheetRef.current.style.transform = 'translateY(100%)'
+      }
+      setTimeout(onClose, 280)
+    } else {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.25s ease-out'
+        sheetRef.current.style.transform = 'translateY(0)'
+        setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = '' }, 250)
+      }
+    }
   }
 
   const isDirty =
@@ -78,9 +112,14 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
       className={`fixed inset-0 z-50 flex items-end backdrop-blur-sm transition-colors duration-300 ${visible ? 'bg-black/30' : 'bg-black/0'}`}
       onClick={handleBackdrop}
     >
-      <div className={`w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-divider transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+      <div ref={sheetRef} className={`w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-divider transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div
+          className="flex justify-center pt-3 pb-2 touch-none select-none"
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+        >
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 pb-8">
