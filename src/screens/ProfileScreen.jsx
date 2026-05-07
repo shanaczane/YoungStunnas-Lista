@@ -232,10 +232,13 @@ async function handleSignOut() {
             </div>
           </div>
 
-          {/* Member since */}
-          <div className="mt-4 pt-4 border-t border-black/6 flex items-center gap-2 text-slate-400 text-xs">
-            <CalendarIcon />
-            <span>Member since {memberSince}</span>
+          {/* Member since + User ID */}
+          <div className="mt-4 pt-4 border-t border-black/6 space-y-2.5">
+            <div className="flex items-center gap-2 text-slate-400 text-xs">
+              <CalendarIcon />
+              <span>Member since {memberSince}</span>
+            </div>
+            <UserIdRow userId={session?.user?.id} />
           </div>
         </div>
 
@@ -452,6 +455,34 @@ function PencilIcon() {
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
     </svg>
+  )
+}
+
+function UserIdRow({ userId }) {
+  const [copied, setCopied] = useState(false)
+  if (!userId) return null
+  const code = 'LISTA-' + userId.replace(/-/g, '').slice(0, 8).toUpperCase()
+  function handleCopy() {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2 text-slate-400 text-xs">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>User ID: <span className="font-mono font-semibold text-slate-600">{code}</span></span>
+      </div>
+      <button
+        onClick={handleCopy}
+        className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors ${copied ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}
+      >
+        {copied ? 'Copied!' : 'Copy'}
+      </button>
+    </div>
   )
 }
 
