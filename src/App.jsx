@@ -79,7 +79,8 @@ export default function App() {
     const dn = session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'User'
     // Auto-register user in profiles so others can find them by User ID
     const userCode = session.user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
-    supabase.from('profiles').upsert({ id: session.user.id, display_name: dn, user_code: userCode }, { onConflict: 'id' })
+    const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+    supabase.from('profiles').upsert({ id: session.user.id, display_name: dn, user_code: userCode, avatar_url: avatarUrl }, { onConflict: 'id' })
     // Handle invite link join
     if (pendingJoinId) {
       supabase.from('space_members')

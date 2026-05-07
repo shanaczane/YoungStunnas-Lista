@@ -21,6 +21,33 @@ function memberColor(name = '') {
   return IDENTITY_COLORS[Math.abs(hash) % IDENTITY_COLORS.length]
 }
 
+// Look up avatar_url from a members array by display_name
+function getMemberAvatar(name, members) {
+  if (!name || !members) return null
+  return members.find(m => m.display_name?.toLowerCase() === name.toLowerCase())?.avatar_url || null
+}
+
+// Avatar that shows Google profile pic when available, colored initial as fallback
+function MemberAvatar({ name, avatarUrl, sizePx = 32, fontSize = 11, className = '' }) {
+  const [failed, setFailed] = useState(false)
+  const initial = (name || '?')[0].toUpperCase()
+  return avatarUrl && !failed ? (
+    <img
+      src={avatarUrl} alt={name}
+      className={`rounded-full object-cover flex-shrink-0 ${className}`}
+      style={{ width: sizePx, height: sizePx }}
+      onError={() => setFailed(true)}
+    />
+  ) : (
+    <div
+      className={`rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${className}`}
+      style={{ width: sizePx, height: sizePx, backgroundColor: memberColor(name || ''), fontSize }}
+    >
+      {initial}
+    </div>
+  )
+}
+
 const CATEGORIES = ['Work','Personal','School','Errands','Health']
 const PINNED_KEY = 'lista_pinned_spaces'
 
@@ -399,7 +426,12 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
   const fetchMembers = useCallback(async () => {
     const { data } = await supabase
       .from('space_members').select('user_id, display_name').eq('space_id', spaceData.id)
-    if (data) setMembers(data)
+    if (!data) return
+    const userIds = data.map(m => m.user_id)
+    const { data: profiles } = await supabase.from('profiles').select('id, avatar_url').in('id', userIds)
+    const avatarMap = {}
+    for (const p of profiles || []) avatarMap[p.id] = p.avatar_url
+    setMembers(data.map(m => ({ ...m, avatar_url: avatarMap[m.user_id] || null })))
   }, [spaceData.id])
 
   useEffect(() => {
@@ -613,9 +645,8 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
                 <div className="flex -space-x-1">
                   {members.slice(0, 5).map((m, i) => (
                     <button key={i} onClick={() => openMemberProfile(m.display_name)}
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold border-2 border-app-bg transition-transform active:scale-90"
-                      style={{ backgroundColor: memberColor(m.display_name || '') }}>
-                      {(m.display_name || '?')[0].toUpperCase()}
+                      className="rounded-full overflow-hidden border-2 border-app-bg transition-transform active:scale-90 flex-shrink-0">
+                      <MemberAvatar name={m.display_name || ''} avatarUrl={m.avatar_url} sizePx={20} fontSize={8} />
                     </button>
                   ))}
                 </div>
@@ -805,9 +836,8 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
               <div key={member} className="space-y-2">
                 <div className="flex items-center gap-2 px-1 pt-1">
                   <button onClick={() => openMemberProfile(member)}
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 transition-transform active:scale-90"
-                    style={{ backgroundColor: memberColor(member) }}>
-                    {member[0].toUpperCase()}
+                    className="rounded-full overflow-hidden flex-shrink-0 transition-transform active:scale-90">
+                    <MemberAvatar name={member} avatarUrl={getMemberAvatar(member, members)} sizePx={24} fontSize={10} />
                   </button>
                   <span className="text-slate-600 text-xs font-bold">{member}</span>
                   <span className="text-slate-300 text-xs">· {memberTasks.length}</span>
@@ -973,16 +1003,14 @@ function SpaceTaskCard({ task, members, spaceColor, themeColor, onToggle, onClic
         <div className="relative flex flex-col items-center">
           {effectiveAssignee && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(effectiveAssignee) }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white transition-transform active:scale-90"
-              style={{ backgroundColor: memberColor(effectiveAssignee) }}>
-              {effectiveAssignee[0].toUpperCase()}
+              className="rounded-full overflow-hidden ring-2 ring-white transition-transform active:scale-90">
+              <MemberAvatar name={effectiveAssignee} avatarUrl={getMemberAvatar(effectiveAssignee, members)} sizePx={32} fontSize={11} />
             </button>
           )}
           {creatorName && !sameAsCreator && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}
-              style={{ backgroundColor: memberColor(creatorName) }}>
-              {creatorName[0].toUpperCase()}
+              className={`rounded-full overflow-hidden ring-2 ring-white transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}>
+              <MemberAvatar name={creatorName} avatarUrl={getMemberAvatar(creatorName, members)} sizePx={24} fontSize={10} />
             </button>
           )}
         </div>
@@ -1277,7 +1305,14 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
 
   useEffect(() => {
     supabase.from('space_members').select('user_id, display_name').eq('space_id', space.id)
-      .then(({ data }) => { if (data) setMembers(data) })
+      .then(async ({ data }) => {
+        if (!data) return
+        const userIds = data.map(m => m.user_id)
+        const { data: profiles } = await supabase.from('profiles').select('id, avatar_url').in('id', userIds)
+        const avatarMap = {}
+        for (const p of profiles || []) avatarMap[p.id] = p.avatar_url
+        setMembers(data.map(m => ({ ...m, avatar_url: avatarMap[m.user_id] || null })))
+      })
     supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
       .then(({ data }) => { if (data) setSentInvites(data) })
   }, [space.id])
@@ -1436,10 +1471,7 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
                       onClick={() => onMemberClick?.(m.display_name)}
                       className="flex items-center gap-3 flex-1 text-left min-w-0"
                     >
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                        style={{ backgroundColor: memberColor(m.display_name || '') }}>
-                        {(m.display_name || '?')[0].toUpperCase()}
-                      </div>
+                      <MemberAvatar name={m.display_name || ''} avatarUrl={m.avatar_url} sizePx={32} fontSize={13} />
                       <div className="flex-1 min-w-0">
                         <p className="text-slate-700 text-sm font-medium truncate">{m.display_name}</p>
                         {m.user_id === session.user.id && (
@@ -2394,10 +2426,9 @@ function MemberView({ tasks, members, inProgressIds, modifications, spaceColor, 
               {/* Avatar — tapping opens profile */}
               <button
                 onClick={e => { e.stopPropagation(); onMemberClick?.(name) }}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 transition-transform active:scale-90"
-                style={{ backgroundColor: memberColor(name) }}
+                className="rounded-full overflow-hidden flex-shrink-0 transition-transform active:scale-90"
               >
-                {name[0]?.toUpperCase() || '?'}
+                <MemberAvatar name={name} avatarUrl={member.avatar_url} sizePx={40} fontSize={14} />
               </button>
 
               <div className="flex-1 min-w-0">
