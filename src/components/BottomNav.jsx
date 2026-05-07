@@ -13,8 +13,8 @@ export default function BottomNav({ active, onNavigate, onAddTask, onImageCaptur
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 flex items-end z-20"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: '0 -2px 12px rgba(0,0,0,0.06)' }}
+      className="fixed bottom-0 left-0 right-0 border-t border-divider flex items-end z-20 backdrop-blur-md"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)', backgroundColor: 'var(--color-nav-bg)', boxShadow: '0 -2px 12px var(--color-shadow-main)' }}
     >
       {leftTabs.map(tab => (
         <TabButton key={tab.id} tab={tab} active={active} onNavigate={onNavigate} />
@@ -25,7 +25,7 @@ export default function BottomNav({ active, onNavigate, onAddTask, onImageCaptur
         <button
           onClick={() => fileRef.current?.click()}
           className="fab w-14 h-14 bg-accent-deep rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
-          style={{ boxShadow: '0 4px 16px rgba(26,79,214,0.45)' }}
+          style={{ boxShadow: '0 4px 16px rgba(10,46,92,0.45)' }}
           aria-label="Scan list"
         >
           <CameraIcon />
@@ -79,11 +79,8 @@ function HomeIcon() {
 function TasksIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="6" height="6" rx="1"/>
-      <rect x="3" y="13" width="6" height="6" rx="1"/>
-      <line x1="13" y1="7" x2="21" y2="7"/>
-      <line x1="13" y1="15" x2="21" y2="15"/>
-      <line x1="13" y1="19" x2="21" y2="19"/>
+      <polyline points="9 11 12 14 22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
     </svg>
   )
 }
@@ -91,10 +88,10 @@ function TasksIcon() {
 function SpacesIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="7" r="3"/>
-      <circle cx="17" cy="10" r="3"/>
-      <path d="M1 21v-1a7 7 0 0 1 12-4.9"/>
-      <path d="M17 21v-1a4 4 0 0 0-4-4"/>
+      <rect x="3" y="3" width="8" height="8" rx="1"/>
+      <rect x="13" y="3" width="8" height="8" rx="1"/>
+      <rect x="3" y="13" width="8" height="8" rx="1"/>
+      <rect x="13" y="13" width="8" height="8" rx="1"/>
     </svg>
   )
 }

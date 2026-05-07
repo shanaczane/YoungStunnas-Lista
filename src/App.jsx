@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
-import AuthScreen from './screens/AuthScreen'
+import AuthScreen from './screens/authentication/AuthScreen'
 import HomeScreen from './screens/HomeScreen'
 import TasksScreen from './screens/TasksScreen'
 import SpacesScreen from './screens/SpacesScreen'
@@ -18,6 +18,31 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [focusChat, setFocusChat] = useState(false)
   const [pendingImage, setPendingImage] = useState(null)
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('lista-theme')
+    return saved === 'dark' ? 'dark' : 'light'
+  })
+
+  useEffect(() => {
+    const root = window.document.documentElement
+    const applyTheme = (t) => {
+      if (t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+    }
+
+    applyTheme(theme)
+    localStorage.setItem('lista-theme', theme)
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const handleChange = () => applyTheme('system')
+      mediaQuery.addEventListener('change', handleChange)
+      return () => mediaQuery.removeEventListener('change', handleChange)
+    }
+  }, [theme])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -172,6 +197,8 @@ export default function App() {
             session={session}
             displayName={displayName}
             tasks={tasks}
+            theme={theme}
+            onSelectTheme={setTheme}
             onBack={() => setScreen('home')}
           />
         )}
@@ -187,6 +214,7 @@ export default function App() {
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
+          tasks={tasks}
           categories={categories}
           session={session}
           onClose={closeTask}

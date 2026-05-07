@@ -1,6 +1,8 @@
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
-import { CATEGORY_COLORS, formatDueDate, getDateGroup } from '../lib/utils'
+import { formatDueDate, getDateGroup } from '../lib/utils'
+import { getCategoryColor } from '../lib/categories'
+import mascot from '../mascots/home-mascot.png'
 
 export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate }) {
   const upcoming = tasks
@@ -13,7 +15,7 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <ScreenHeader>
+      <ScreenHeader className="flex items-center justify-between px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <div>
           <h1 className="text-slate-900 font-bold text-2xl">Reminders</h1>
           <p className="text-slate-400 text-xs mt-0.5">{upcoming.length} upcoming</p>
@@ -38,14 +40,6 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
           </>
         )}
 
-        <section className="bg-white rounded-2xl p-4 card-elevated">
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">How Reminders Work</p>
-          <div className="space-y-3">
-            <Tip icon="💬" text="Type a task with a date — Lista sets the reminder automatically." />
-            <Tip icon="✏️" text="Tap any task to set a custom reminder time (15 min, 1 hour, 1 day before)." />
-            <Tip icon="🔔" text="Install Lista as a PWA to receive push notifications on your device." />
-          </div>
-        </section>
       </div>
     </div>
   )
@@ -65,22 +59,22 @@ function ReminderSection({ title, titleColor, tasks, onOpenTask }) {
 }
 
 function ReminderRow({ task, onOpenTask }) {
-  const colors = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.Personal
+  const colors = getCategoryColor(task.category)
   const isOverdue = getDateGroup(task.due_date) === 'Overdue'
 
   return (
     <button
       onClick={() => onOpenTask(task.id)}
-      className="w-full bg-white rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] overflow-hidden text-left"
+      className="w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] overflow-hidden text-left"
     >
-      <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: isOverdue ? '#ef4444' : colors.border }} />
+      <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: isOverdue ? '#ef4444' : colors.border }} />
       <div className="flex-1 py-3.5 px-3 min-w-0">
         <p className="text-slate-800 text-sm font-semibold leading-tight truncate">{task.task_name}</p>
         <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
           {formatDueDate(task.due_date)}
         </p>
       </div>
-      <div className="pr-3 flex items-center gap-2 flex-shrink-0">
+      <div className="pr-3 flex items-center gap-2 shrink-0">
         <span
           className="text-[10px] font-bold px-2.5 py-1 rounded-full"
           style={{ backgroundColor: colors.bg, color: colors.text }}
@@ -95,19 +89,11 @@ function ReminderRow({ task, onOpenTask }) {
   )
 }
 
-function Tip({ icon, text }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <span className="text-base flex-shrink-0">{icon}</span>
-      <p className="text-slate-400 text-xs leading-relaxed">{text}</p>
-    </div>
-  )
-}
 
 function EmptyReminders() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-      <img src="/mascots/reminders.png" alt="Ollie" className="w-32 h-32 object-contain mb-2" />
+      <img src={mascot} alt="Ollie" className="w-32 h-32 object-contain mb-2" />
       <p className="text-slate-400 text-sm">No upcoming reminders</p>
       <p className="text-slate-300 text-xs mt-1">Tasks with due dates will appear here</p>
     </div>

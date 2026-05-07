@@ -5,10 +5,12 @@ import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import homeMascot from '../mascots/home-mascot.png'
 import { parseTask, parseImageList, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput } from '../lib/ai'
-import { formatDueDate, getGreeting } from '../lib/utils'
+import { formatDueDate } from '../lib/utils'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
+import { CategoryIcon } from '../lib/icons'
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
+
 
 export default function HomeScreen({
   session,
@@ -79,7 +81,6 @@ export default function HomeScreen({
     if (!pendingImage) return
     onPendingImageConsumed()
     setParseCard(null)
-    setParseError('')
     setScanError('')
     setScanningImage(true)
     parseImageList(pendingImage)
@@ -226,11 +227,11 @@ export default function HomeScreen({
       )}
 
       {/* Top bar */}
-      <ScreenHeader>
+      <ScreenHeader className="flex items-center justify-between px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <div className="flex items-center gap-3">
           <AppLogo size="md" />
           <div>
-            <p className="text-slate-400 text-xs leading-none mb-0.5">{getGreeting()},</p>
+            <p className="text-slate-400 text-xs leading-none mb-0.5">Welcome back,</p>
             <h1 className="text-slate-900 font-bold text-lg leading-tight">{displayName.split(' ')[0]}</h1>
           </div>
         </div>
@@ -252,29 +253,35 @@ export default function HomeScreen({
           <>
             {upcoming.length > 0 && (
               <section className="px-5 pt-6 mb-6">
-                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Due Soon</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Coming Up</p>
+                  <button onClick={() => onNavigate('tasks')} className="text-accent-deep text-xs font-semibold">See all →</button>
+                </div>
                 <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-                  {upcoming.map(task => (
-                    <button
-                      key={task.id}
-                      onClick={() => onOpenTask(task.id)}
-                      className="flex-shrink-0 bg-white rounded-2xl px-4 py-3 text-left min-w-[152px] card-elevated transition-all active:scale-95"
-                    >
-                      <div
-                        className="w-6 h-1 rounded-full mb-2"
-                        style={{ backgroundColor: getCategoryColor(task.category, categories)?.border }}
-                      />
-                      <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2">{task.task_name}</p>
-                      <p className="text-slate-400 text-[10px] mt-1.5">{formatDueDate(task.due_date)}</p>
-                    </button>
-                  ))}
+                  {upcoming.map(task => {
+                    const catColors = getCategoryColor(task.category, categories)
+                    return (
+                      <button
+                        key={task.id}
+                        onClick={() => onOpenTask(task.id)}
+                        className="shrink-0 bg-card-bg rounded-2xl text-left min-w-37 card-elevated transition-all active:scale-95 overflow-hidden flex items-stretch"
+                      >
+                        <div className="w-1 shrink-0" style={{ backgroundColor: catColors?.border }} />
+                        <div className="px-3 py-3">
+                          <p className="text-[10px] font-bold font-mono mb-1.5" style={{ color: catColors?.text }}>{task.category}</p>
+                          <p className="text-slate-800 text-xs font-semibold leading-snug line-clamp-2 mb-1.5">{task.task_name}</p>
+                          <p className="text-slate-400 text-[10px] font-mono">{formatDueDate(task.due_date)}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </section>
             )}
 
             <section className="px-5 pt-2">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Tasks</p>
+                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Recent Captures</p>
                 <div className="flex items-center gap-2">
                   <div className="relative">
                     <button
@@ -288,7 +295,7 @@ export default function HomeScreen({
                     {showSortMenu && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
-                        <div className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-xl border border-black/8 overflow-hidden min-w-[160px]">
+                        <div className="absolute right-0 top-9 z-20 bg-card-bg rounded-2xl shadow-xl border border-divider overflow-hidden min-w-40">
                           {SORT_MODES.map(mode => (
                             <button
                               key={mode}
@@ -318,43 +325,39 @@ export default function HomeScreen({
                 </div>
               </div>
               <div className="space-y-2.5">
-                {recent.map(task => (
-                  <button
-                    key={task.id}
-                    onClick={() => onOpenTask(task.id)}
-                    className="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 card-elevated transition-all active:scale-[0.99] text-left"
-                  >
-                    <div
-                      className="w-1 self-stretch rounded-full flex-shrink-0"
-                      style={{ backgroundColor: getCategoryColor(task.category, categories)?.border }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
-                        {task.task_name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-slate-400 text-xs">
-                          {task.due_date ? formatDueDate(task.due_date) : 'No due date'}
-                        </p>
-                        {isChecklist(task) && (() => {
-                          const items = getChecklistItems(task) || []
-                          const done = items.filter(it => it.done).length
-                          return (
-                            <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                              ✓ {done}/{items.length}
-                            </span>
-                          )
-                        })()}
-                      </div>
-                    </div>
-                    <span
-                      className="flex-shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      style={{ backgroundColor: getCategoryColor(task.category, categories)?.bg, color: getCategoryColor(task.category, categories)?.text }}
+                {recent.map(task => {
+                  const catColors = getCategoryColor(task.category, categories)
+                  return (
+                    <button
+                      key={task.id}
+                      onClick={() => onOpenTask(task.id)}
+                      className="w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] text-left overflow-hidden"
                     >
-                      {task.category}
-                    </span>
-                  </button>
-                ))}
+                      <div
+                        className="w-1 self-stretch shrink-0"
+                        style={{ backgroundColor: catColors?.border }}
+                      />
+                      <div className="flex-1 min-w-0 px-4 py-3.5">
+                        <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-900'}`}>
+                          {task.task_name}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-bold font-mono" style={{ color: catColors?.text }}>{task.category}</span>
+                          <span className="text-slate-300 text-[10px]">·</span>
+                          <span className="text-slate-400 text-xs font-mono">
+                            {task.due_date ? formatDueDate(task.due_date) : 'No due date'}
+                          </span>
+                          {isChecklist(task) && (() => {
+                            const items = getChecklistItems(task) || []
+                            const done = items.filter(it => it.done).length
+                            return <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">✓ {done}/{items.length}</span>
+                          })()}
+                        </div>
+                      </div>
+                      <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0 mr-4" />
+                    </button>
+                  )
+                })}
               </div>
             </section>
           </>
@@ -378,9 +381,9 @@ export default function HomeScreen({
       )}
 
       {/* Bottom fixed area: parse card + chat input stacked */}
-      <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
+      <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
-          <div className="bg-white rounded-2xl p-4 card-elevated-lg animate-slide-up">
+          <div className="bg-card-bg rounded-2xl p-4 card-elevated-lg animate-slide-up">
             <div className="flex items-center justify-between mb-3">
               <span className="text-accent-deep text-[10px] font-bold uppercase tracking-widest">AI Parsed</span>
               {parseError && <p className="text-amber-500 text-[10px]">{parseError}</p>}
@@ -409,7 +412,7 @@ export default function HomeScreen({
                     <div className="space-y-2.5">
                       {parseCard.checklistItems.map((item, i) => (
                         <div key={i} className="flex items-center gap-3 group">
-                          <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                          <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />
                           <input
                             ref={el => { itemRefs.current[i] = el }}
                             type="text"
@@ -441,7 +444,7 @@ export default function HomeScreen({
                           <button
                             type="button"
                             onClick={() => handleEditField('checklistItems', parseCard.checklistItems.filter((_, j) => j !== i))}
-                            className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                            className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                           >✕</button>
                         </div>
                       ))}
@@ -454,7 +457,7 @@ export default function HomeScreen({
                         }}
                         className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors mt-1"
                       >
-                        <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
+                        <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center shrink-0 text-xs">+</div>
                         <span className="text-sm">Add item</span>
                       </button>
                     </div>
@@ -489,12 +492,12 @@ export default function HomeScreen({
                         key={cat.name}
                         type="button"
                         onClick={() => handleEditField('category', cat.name)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
+                        className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
                           isSelected ? '' : 'opacity-55 hover:opacity-80'
                         }`}
                         style={{ backgroundColor: catColors.bg, color: catColors.text, ...(isSelected ? { outline: `2px solid ${catColors.border}`, outlineOffset: '2px' } : {}) }}
                       >
-                        <span>{cat.emoji || '📁'}</span>
+                        <CategoryIcon name={cat.name} iconId={cat.emoji} size={11} color={catColors.text} />
                         <span>{cat.name}</span>
                         {isSelected && (
                           <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
@@ -510,7 +513,7 @@ export default function HomeScreen({
                     <button
                       type="button"
                       onClick={() => setAddingCategory(true)}
-                      className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+                      className="shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
                     >
                       +
                     </button>
@@ -572,7 +575,7 @@ export default function HomeScreen({
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 card-elevated">
+        <div className="flex items-center gap-2 bg-card-bg rounded-2xl px-4 py-3 card-elevated">
           <input
             ref={inputRef}
             type="text"
@@ -585,7 +588,7 @@ export default function HomeScreen({
           <button
             onClick={handleSend}
             disabled={!input.trim() || parsing}
-            className="w-8 h-8 rounded-full bg-accent-deep flex items-center justify-center transition-colors disabled:opacity-40 active:bg-accent-mid flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-accent-deep text-white flex items-center justify-center transition-colors disabled:opacity-40 active:bg-accent-mid shrink-0"
           >
             {parsing ? (
               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -629,7 +632,7 @@ function EditableRow({ label, value, onChange }) {
 function EmptyHome() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] px-8 text-center">
-      <img src={homeMascot} alt="Lista" className="w-36 h-36 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
+      <img src={homeMascot} alt="Lista" className="w-36 h-36 object-contain mb-2" />
       <p className="text-slate-800 font-semibold text-lg">Type your first task</p>
       <p className="text-slate-400 text-sm mt-2 leading-relaxed">
         Just type naturally below — Lista will organize it for you automatically.

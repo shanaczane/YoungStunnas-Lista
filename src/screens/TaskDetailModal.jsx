@@ -1,16 +1,23 @@
-import { useState, useRef } from 'react'
-import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji, createCategory } from '../lib/categories'
+import { useState, useRef, useEffect } from 'react'
+import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
+import { CategoryIcon } from '../lib/icons'
 import { isChecklist, getChecklistItems, getChecklistTitle, encodeChecklist } from '../lib/ai'
 
-const REMINDER_OPTIONS = [
-  { label: '15 min before', value: 15 },
-  { label: '1 hour before', value: 60 },
-  { label: '1 day before', value: 1440 },
+const REMINDER_PRESETS = [
+  { label: '15 min', value: 15 },
+  { label: '1 hr', value: 60 },
+  { label: '1 day', value: 1440 },
 ]
+
+function minutesToCustom(m) {
+  if (m >= 1440 && m % 1440 === 0) return { value: String(m / 1440), unit: 'day' }
+  if (m >= 60  && m % 60  === 0) return { value: String(m / 60),   unit: 'hr'  }
+  return { value: String(m), unit: 'min' }
+}
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
-export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
+export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
   const [taskName, setTaskName] = useState(task.task_name)
   const [category, setCategory] = useState(task.category || 'Personal')
   const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
@@ -19,11 +26,61 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   const [checklistTitle, setChecklistTitle] = useState(getChecklistTitle(task) ?? task.task_name)
   const [reminderEnabled, setReminderEnabled] = useState(task.reminder_minutes != null)
   const [reminderMinutes, setReminderMinutes] = useState(task.reminder_minutes || 60)
+  const isCustomPreset = task.reminder_minutes != null && !REMINDER_PRESETS.some(p => p.value === task.reminder_minutes)
+  const initCustom = minutesToCustom(task.reminder_minutes || 30)
+  const [customMode, setCustomMode] = useState(isCustomPreset)
+  const [customValue, setCustomValue] = useState(initCustom.value)
+  const [customUnit, setCustomUnit] = useState(initCustom.unit)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
+  const [visible, setVisible] = useState(false)
   const itemRefs = useRef([])
+  const sheetRef = useRef(null)
+  const drag = useRef(null)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  function handleClose() {
+    if (sheetRef.current) { sheetRef.current.style.transform = ''; sheetRef.current.style.transition = '' }
+    setVisible(false)
+    setTimeout(onClose, 280)
+  }
+
+  function onDragStart(e) {
+    drag.current = { startY: e.touches[0].clientY, delta: 0 }
+    if (sheetRef.current) sheetRef.current.style.transition = 'none'
+  }
+
+  function onDragMove(e) {
+    if (!drag.current) return
+    const delta = Math.max(0, e.touches[0].clientY - drag.current.startY)
+    drag.current.delta = delta
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${delta}px)`
+  }
+
+  function onDragEnd() {
+    if (!drag.current) return
+    const { delta } = drag.current
+    drag.current = null
+    if (delta < 8 || delta > 90) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.28s ease-out'
+        sheetRef.current.style.transform = 'translateY(100%)'
+      }
+      setTimeout(onClose, 280)
+    } else {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 0.25s ease-out'
+        sheetRef.current.style.transform = 'translateY(0)'
+        setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = '' }, 250)
+      }
+    }
+  }
 
   const isDirty =
     taskName !== task.task_name ||
@@ -34,6 +91,16 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
       : notes !== (task.notes || '')) ||
     reminderEnabled !== (task.reminder_minutes != null) ||
     (reminderEnabled && reminderMinutes !== task.reminder_minutes)
+
+  function handleCustomReminder(val, unit) {
+    setCustomValue(val)
+    setCustomUnit(unit)
+    const n = parseInt(val)
+    if (!isNaN(n) && n > 0) {
+      const mult = unit === 'day' ? 1440 : unit === 'hr' ? 60 : 1
+      setReminderMinutes(n * mult)
+    }
+  }
 
   async function handleSave() {
     if (!isDirty) return
@@ -46,28 +113,38 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
       reminder_minutes: reminderEnabled ? reminderMinutes : null,
     })
     setSaving(false)
-    onClose()
+    handleClose()
   }
 
   function handleDelete() {
     if (!showDeleteConfirm) { setShowDeleteConfirm(true); return }
-    onDelete(task.id)
+    setVisible(false)
+    setTimeout(() => onDelete(task.id), 280)
   }
 
   function handleBackdrop(e) {
-    if (e.target === e.currentTarget) onClose()
+    if (e.target === e.currentTarget) handleClose()
   }
 
-  const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
+  const usedNames = new Set(tasks.map(t => t.category))
+  const allCategories = [
+    ...BUILT_IN_CATEGORIES.filter(b => usedNames.has(b.name) || b.name === category),
+    ...categories,
+  ]
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/30 backdrop-blur-sm"
+      className={`fixed inset-0 z-50 flex items-end backdrop-blur-sm transition-colors duration-300 ${visible ? 'bg-black/30' : 'bg-black/0'}`}
       onClick={handleBackdrop}
     >
-      <div className="w-full bg-white rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-black/10">
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+      <div ref={sheetRef} className={`w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-divider transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div
+          className="flex justify-center pt-3 pb-2 touch-none select-none"
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+        >
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 pb-8">
@@ -100,7 +177,6 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
               {allCategories.map(cat => {
                 const isSelected = category === cat.name
                 const catColors  = getCategoryColor(cat.name, categories)
-                const catEmoji   = getCategoryEmoji(cat.name, categories)
                 return (
                   <button
                     key={cat.name}
@@ -114,7 +190,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                       ...(isSelected ? { outline: `2px solid ${catColors.border}`, outlineOffset: '2px' } : {}),
                     }}
                   >
-                    <span>{catEmoji}</span>
+                    <CategoryIcon name={cat.name} iconId={cat.emoji} size={11} color={catColors.text} />
                     <span>{cat.name}</span>
                     {isSelected && (
                       <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
@@ -151,7 +227,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                   }}
                   placeholder="New category name..."
                   autoFocus
-                  className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+                  className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-divider focus:border-accent-deep"
                 />
                 <button
                   onClick={async () => {
@@ -175,12 +251,12 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
               type="datetime-local"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep transition-colors"
             />
           </div>
 
           {checklistItems ? (
-            <div className="mb-4 bg-slate-50 rounded-xl border border-black/10 px-4 py-3">
+            <div className="mb-4 bg-slate-50 rounded-xl border border-divider px-4 py-3">
               <input
                 type="text"
                 value={checklistTitle}
@@ -264,12 +340,12 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Add notes..."
                 rows={3}
-                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
+                className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-3 py-2.5 outline-none border border-divider focus:border-accent-deep transition-colors resize-none placeholder:text-slate-300"
               />
             </div>
           )}
 
-          <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-black/10">
+          <div className="mb-6 bg-slate-50 rounded-xl px-4 py-3 border border-divider">
             <div className="flex items-center justify-between">
               <p className="text-slate-800 text-sm font-medium">Remind me before due</p>
               <button
@@ -280,20 +356,59 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
               </button>
             </div>
             {reminderEnabled && (
-              <div className="flex gap-2 mt-3">
-                {REMINDER_OPTIONS.map(opt => (
+              <div className="mt-3">
+                <div className="flex gap-2">
+                  {REMINDER_PRESETS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setReminderMinutes(opt.value); setCustomMode(false) }}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        !customMode && reminderMinutes === opt.value
+                          ? 'bg-accent-deep text-white'
+                          : 'border border-black/10 text-slate-500 hover:text-accent-deep'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                   <button
-                    key={opt.value}
-                    onClick={() => setReminderMinutes(opt.value)}
+                    onClick={() => setCustomMode(true)}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      reminderMinutes === opt.value
+                      customMode
                         ? 'bg-accent-deep text-white'
                         : 'border border-black/10 text-slate-500 hover:text-accent-deep'
                     }`}
                   >
-                    {opt.label}
+                    Custom
                   </button>
-                ))}
+                </div>
+                {customMode && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={customValue}
+                      onChange={e => handleCustomReminder(e.target.value, customUnit)}
+                      className="w-20 bg-slate-50 text-slate-800 text-sm rounded-lg px-2.5 py-1.5 outline-none border border-divider focus:border-accent-deep text-center"
+                    />
+                    <div className="flex gap-1">
+                      {['min', 'hr', 'day'].map(unit => (
+                        <button
+                          key={unit}
+                          onClick={() => handleCustomReminder(customValue, unit)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            customUnit === unit
+                              ? 'bg-accent-deep text-white'
+                              : 'border border-black/10 text-slate-500 hover:text-accent-deep'
+                          }`}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-slate-400 text-xs">before due</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -310,13 +425,17 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
 
           <button
             onClick={handleDelete}
-            className={`w-full py-3 rounded-xl text-sm font-medium transition-colors ${
+            className={`w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
               showDeleteConfirm
-                ? 'bg-red-50 text-red-500 border border-red-200'
-                : 'border border-black/10 text-slate-400 hover:text-red-500 hover:border-red-200'
+                ? 'bg-red-500 text-white active:bg-red-600'
+                : 'bg-red-50 text-red-500 hover:bg-red-100'
             }`}
           >
-            {showDeleteConfirm ? 'Tap again to delete' : 'Delete Task'}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v5"/><path d="M14 11v5"/>
+            </svg>
+            {showDeleteConfirm ? 'Confirm Delete' : 'Delete Task'}
           </button>
         </div>
       </div>
