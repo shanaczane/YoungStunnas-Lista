@@ -389,7 +389,7 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
                       min="1"
                       value={customValue}
                       onChange={e => handleCustomReminder(e.target.value, customUnit)}
-                      className="w-16 bg-white text-slate-800 text-sm rounded-lg px-2.5 py-1.5 outline-none border border-divider focus:border-accent-deep text-center"
+                      className="w-20 bg-slate-50 text-slate-800 text-sm rounded-lg px-2.5 py-1.5 outline-none border border-divider focus:border-accent-deep text-center"
                     />
                     <div className="flex gap-1">
                       {['min', 'hr', 'day'].map(unit => (
