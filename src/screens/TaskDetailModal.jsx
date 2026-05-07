@@ -3,11 +3,17 @@ import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/ca
 import { CategoryIcon } from '../lib/icons'
 import { isChecklist, getChecklistItems, getChecklistTitle, encodeChecklist } from '../lib/ai'
 
-const REMINDER_OPTIONS = [
-  { label: '15 min before', value: 15 },
-  { label: '1 hour before', value: 60 },
-  { label: '1 day before', value: 1440 },
+const REMINDER_PRESETS = [
+  { label: '15 min', value: 15 },
+  { label: '1 hr', value: 60 },
+  { label: '1 day', value: 1440 },
 ]
+
+function minutesToCustom(m) {
+  if (m >= 1440 && m % 1440 === 0) return { value: String(m / 1440), unit: 'day' }
+  if (m >= 60  && m % 60  === 0) return { value: String(m / 60),   unit: 'hr'  }
+  return { value: String(m), unit: 'min' }
+}
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
@@ -20,6 +26,11 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
   const [checklistTitle, setChecklistTitle] = useState(getChecklistTitle(task) ?? task.task_name)
   const [reminderEnabled, setReminderEnabled] = useState(task.reminder_minutes != null)
   const [reminderMinutes, setReminderMinutes] = useState(task.reminder_minutes || 60)
+  const isCustomPreset = task.reminder_minutes != null && !REMINDER_PRESETS.some(p => p.value === task.reminder_minutes)
+  const initCustom = minutesToCustom(task.reminder_minutes || 30)
+  const [customMode, setCustomMode] = useState(isCustomPreset)
+  const [customValue, setCustomValue] = useState(initCustom.value)
+  const [customUnit, setCustomUnit] = useState(initCustom.unit)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [addingCategory, setAddingCategory] = useState(false)
@@ -80,6 +91,16 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
       : notes !== (task.notes || '')) ||
     reminderEnabled !== (task.reminder_minutes != null) ||
     (reminderEnabled && reminderMinutes !== task.reminder_minutes)
+
+  function handleCustomReminder(val, unit) {
+    setCustomValue(val)
+    setCustomUnit(unit)
+    const n = parseInt(val)
+    if (!isNaN(n) && n > 0) {
+      const mult = unit === 'day' ? 1440 : unit === 'hr' ? 60 : 1
+      setReminderMinutes(n * mult)
+    }
+  }
 
   async function handleSave() {
     if (!isDirty) return
@@ -335,20 +356,59 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
               </button>
             </div>
             {reminderEnabled && (
-              <div className="flex gap-2 mt-3">
-                {REMINDER_OPTIONS.map(opt => (
+              <div className="mt-3">
+                <div className="flex gap-2">
+                  {REMINDER_PRESETS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setReminderMinutes(opt.value); setCustomMode(false) }}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        !customMode && reminderMinutes === opt.value
+                          ? 'bg-accent-deep text-white'
+                          : 'border border-black/10 text-slate-500 hover:text-accent-deep'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                   <button
-                    key={opt.value}
-                    onClick={() => setReminderMinutes(opt.value)}
+                    onClick={() => setCustomMode(true)}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      reminderMinutes === opt.value
+                      customMode
                         ? 'bg-accent-deep text-white'
                         : 'border border-black/10 text-slate-500 hover:text-accent-deep'
                     }`}
                   >
-                    {opt.label}
+                    Custom
                   </button>
-                ))}
+                </div>
+                {customMode && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={customValue}
+                      onChange={e => handleCustomReminder(e.target.value, customUnit)}
+                      className="w-16 bg-white text-slate-800 text-sm rounded-lg px-2.5 py-1.5 outline-none border border-divider focus:border-accent-deep text-center"
+                    />
+                    <div className="flex gap-1">
+                      {['min', 'hr', 'day'].map(unit => (
+                        <button
+                          key={unit}
+                          onClick={() => handleCustomReminder(customValue, unit)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            customUnit === unit
+                              ? 'bg-accent-deep text-white'
+                              : 'border border-black/10 text-slate-500 hover:text-accent-deep'
+                          }`}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-slate-400 text-xs">before due</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
