@@ -109,6 +109,41 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [session, fetchTasks, loadCategories])
 
+  useEffect(() => {
+    if (!session?.user) return
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+    const SHOWN_KEY = 'lista_notifs_shown'
+    function checkReminders() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return
+      const now = Date.now()
+      let shown
+      try { shown = new Set(JSON.parse(localStorage.getItem(SHOWN_KEY) || '[]')) }
+      catch { shown = new Set() }
+      let changed = false
+      tasks.forEach(task => {
+        if (task.is_complete || !task.due_date || task.reminder_minutes == null) return
+        const reminderTime = new Date(task.due_date).getTime() - task.reminder_minutes * 60 * 1000
+        const key = `${task.id}|${task.due_date}|${task.reminder_minutes}`
+        if (reminderTime <= now && reminderTime >= now - 2 * 60 * 1000 && !shown.has(key)) {
+          shown.add(key); changed = true
+          const m = task.reminder_minutes
+          const body = m === 0 ? 'Due now!'
+            : m < 60 ? `Due in ${m} min`
+            : m < 1440 ? `Due in ${m / 60} hr`
+            : `Due in ${m / 1440} day${m / 1440 > 1 ? 's' : ''}`
+          const n = new Notification(task.task_name, { body, icon: '/favicon.ico', tag: key })
+          n.onclick = () => { window.focus(); openTask(task.id); setScreen('notifications') }
+        }
+      })
+      if (changed) localStorage.setItem(SHOWN_KEY, JSON.stringify([...shown]))
+    }
+    checkReminders()
+    const interval = setInterval(checkReminders, 60 * 1000)
+    return () => clearInterval(interval)
+  }, [tasks, session])
+
   function handleTaskCreated(task) {
     setTasks(prev => [task, ...prev])
   }
@@ -174,6 +209,13 @@ export default function App() {
 
   const selectedTask = tasks.find(t => t.id === selectedTaskId) || null
 
+  const alertUnreadCount = (() => {
+    try {
+      const readIds = new Set(JSON.parse(localStorage.getItem('lista_alerts_read') || '[]'))
+      return tasks.filter(t => !t.is_complete && t.due_date && t.reminder_minutes != null && !readIds.has(t.id)).length
+    } catch { return 0 }
+  })()
+
   return (
     <div className="min-h-screen bg-app-bg">
       <div className="pb-16">
@@ -238,6 +280,7 @@ export default function App() {
         onNavigate={tab => navigateTo(tab)}
         onAddTask={() => navigateTo('home', { focusChat: true })}
         onImageCapture={handleImageCapture}
+        alertCount={alertUnreadCount}
       />
 
       {selectedTask && (

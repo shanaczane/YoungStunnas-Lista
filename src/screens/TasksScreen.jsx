@@ -37,7 +37,10 @@ export default function TasksScreen({
   const [parseError, setParseError] = useState('')
   const inputRef = useRef(null)
 
-  const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
+  const allCategories = [
+    ...BUILT_IN_CATEGORIES.filter(b => !categories.some(c => c.name === b.name)),
+    ...categories,
+  ]
   const openCount = tasks.filter(t => !t.is_complete).length
 
   const isCustomCategory = name => categories.some(cat => cat.name === name)
@@ -170,7 +173,7 @@ export default function TasksScreen({
               const done = tasks.filter(t => t.category === folder.name && t.is_complete).length
               const pct = folder.taskCount > 0 ? Math.round((done / folder.taskCount) * 100) : 0
               return (
-                <div key={folder.name} className="w-full bg-white rounded-2xl p-4 card-elevated transition-all active:scale-[0.99]">
+                <div key={folder.name} className="w-full bg-card-bg rounded-2xl p-4 card-elevated transition-all active:scale-[0.99]">
                   <button onClick={() => setActiveCategory(folder)} className="w-full flex items-center gap-4 text-left">
                     <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: colors.border }}>
                       <CategoryIcon name={folder.name} />
@@ -182,7 +185,7 @@ export default function TasksScreen({
                     {isCustomCategory(folder.name) && (
                       <button
                         onClick={e => { e.stopPropagation(); setDirectDeleteCat({ ...folder, taskCount: folder.taskCount }) }}
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-slate-200 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-slate-200 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                           <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
@@ -374,13 +377,13 @@ export default function TasksScreen({
                 <input type="datetime-local"
                   value={parseCard.due_date ? parseCard.due_date.slice(0, 16) : ''}
                   onChange={e => handleEditField('due_date', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                  className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-black/10 focus:border-accent-deep"
+                  className="w-full bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-2 outline-none border border-divider focus:border-accent-deep"
                 />
               </div>
             </div>
             <div className="flex gap-2">
               <button onClick={() => { setParseCard(null); setParseError('') }}
-                className="flex-1 py-2.5 rounded-xl border border-black/10 text-slate-500 text-sm font-medium">Cancel</button>
+                className="flex-1 py-2.5 rounded-xl border border-divider text-slate-500 text-sm font-medium">Cancel</button>
               <button onClick={handleConfirm}
                 className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition-colors active:opacity-90"
                 style={{ backgroundColor: colors.border }}>
@@ -427,7 +430,7 @@ export default function TasksScreen({
 function FilterPill({ label, active, color, onClick, onEdit }) {
   return (
     <div className={`shrink-0 flex items-center rounded-full text-xs font-semibold transition-colors ${
-      active ? 'bg-accent-deep text-white' : 'bg-card-bg text-slate-500 border border-black/10'
+      active ? 'bg-accent-deep text-white' : 'bg-card-bg text-slate-500 border border-divider'
     }`}>
       <button onClick={onClick} className="flex items-center gap-1.5 pl-3.5 pr-2 py-1.5">
         {color && !active && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}
@@ -641,7 +644,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
             onChange={e => setName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && name.trim()) handleSave() }}
             placeholder="e.g. Thesis, Gym, Startup…"
-            className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300"
+            className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-divider focus:border-accent-deep placeholder:text-slate-300"
           />
           {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </div>
@@ -698,7 +701,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
           <button
             onClick={() => handleClose(onCancel)}
             disabled={saving || deleting}
-            className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium"
+            className="flex-1 py-3 rounded-xl border border-divider text-slate-500 text-sm font-medium"
           >
             Cancel
           </button>
@@ -717,7 +720,7 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
           <button
             onClick={() => { setError(''); setShowDeleteConfirm(true) }}
             disabled={saving || deleting}
-            className="w-full mt-3 py-3 rounded-xl border border-black/10 text-slate-400 text-sm font-medium transition-colors hover:text-red-500 hover:border-red-200 disabled:opacity-50"
+            className="w-full mt-3 py-3 rounded-xl border border-divider text-slate-400 text-sm font-medium transition-colors hover:text-red-500 hover:border-red-200 disabled:opacity-50"
           >
             {deleting
               ? 'Deleting…'
@@ -801,7 +804,7 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
         >
           <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
         </div>
-        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
+        <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mb-4">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 6h18"/>
             <path d="M8 6V4h8v2"/>
@@ -822,7 +825,7 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
           <button
             onClick={handleClose}
             disabled={deleting}
-            className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium disabled:opacity-50"
+            className="flex-1 py-3 rounded-xl border border-divider text-slate-500 text-sm font-medium disabled:opacity-50"
           >
             Cancel
           </button>
@@ -858,7 +861,7 @@ function AddCategoryButton({ session, categories, onCreated }) {
       <input
         type="text" value={val} onChange={e => setVal(e.target.value)} autoFocus
         onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setVal('') } }}
-        placeholder="New category..." className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-black/10 focus:border-accent-deep"
+        placeholder="New category..." className="flex-1 bg-slate-50 text-slate-800 text-xs rounded-xl px-2.5 py-1.5 outline-none border border-divider focus:border-accent-deep"
       />
       <button onClick={handleAdd} disabled={!val.trim()} className="px-2.5 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold disabled:opacity-40">Add</button>
       <button onClick={() => { setAdding(false); setVal('') }} className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs">✕</button>
@@ -880,7 +883,7 @@ function EmptyCategory({ onNavigate }) {
       <p className="text-slate-400 text-xs mt-1 mb-3">Head to Home and add one</p>
       <button
         onClick={() => onNavigate('home', { focusChat: true })}
-        className="border border-black/10 text-slate-500 text-sm px-4 py-2 rounded-xl hover:text-accent-deep hover:border-accent-deep/30 transition-colors"
+        className="border border-divider text-slate-500 text-sm px-4 py-2 rounded-xl hover:text-accent-deep hover:border-accent-deep/30 transition-colors"
       >
         Add a task
       </button>

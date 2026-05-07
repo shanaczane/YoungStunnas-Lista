@@ -1,101 +1,154 @@
+import { useState } from 'react'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
 import { formatDueDate, getDateGroup } from '../lib/utils'
 import { getCategoryColor } from '../lib/categories'
 import mascot from '../mascots/home-mascot.png'
 
+const STORAGE_KEY = 'lista_alerts_read'
+
+function getReadIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')) }
+  catch { return new Set() }
+}
+
+function saveReadIds(ids) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]))
+}
+
 export default function AlertsScreen({ tasks, session, displayName, onOpenTask, onNavigate }) {
+  const [readIds, setReadIds] = useState(getReadIds)
+
   const upcoming = tasks
-    .filter(t => !t.is_complete && t.due_date)
+    .filter(t => !t.is_complete && t.due_date && t.reminder_minutes != null)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
 
   const overdue = upcoming.filter(t => getDateGroup(t.due_date) === 'Overdue')
   const today   = upcoming.filter(t => getDateGroup(t.due_date) === 'Today')
   const later   = upcoming.filter(t => !['Overdue', 'Today'].includes(getDateGroup(t.due_date)))
 
+  const unreadCount = upcoming.filter(t => !readIds.has(t.id)).length
+
+  function markAllRead() {
+    const next = new Set([...readIds, ...upcoming.map(t => t.id)])
+    setReadIds(next)
+    saveReadIds(next)
+  }
+
+  function handleOpen(taskId) {
+    const next = new Set([...readIds, taskId])
+    setReadIds(next)
+    saveReadIds(next)
+    onOpenTask(taskId)
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <ScreenHeader className="flex items-center justify-between px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
-        <div>
-          <h1 className="text-slate-900 font-bold text-2xl">Reminders</h1>
-          <p className="text-slate-400 text-xs mt-0.5">{upcoming.length} upcoming</p>
+      <ScreenHeader className="px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-slate-900 font-bold text-2xl">Alerts</h1>
+            <p className="text-slate-400 text-xs mt-0.5">
+              {unreadCount > 0 ? `${unreadCount} unread` : upcoming.length > 0 ? 'All caught up' : 'No reminders set'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                className="text-xs text-accent-deep font-semibold"
+              >
+                Mark all as read
+              </button>
+            )}
+            <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
+          </div>
         </div>
-        <ProfileAvatar displayName={displayName} onNavigate={onNavigate} />
       </ScreenHeader>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4 space-y-6">
+      <div className="flex-1 overflow-y-auto pb-6">
         {upcoming.length === 0 ? (
-          <EmptyReminders />
+          <EmptyAlerts />
         ) : (
           <>
             {overdue.length > 0 && (
-              <ReminderSection title="Overdue" titleColor="text-red-500" tasks={overdue} onOpenTask={onOpenTask} />
+              <AlertSection title="Overdue" dotColor="#ef4444" tasks={overdue} readIds={readIds} onOpen={handleOpen} />
             )}
             {today.length > 0 && (
-              <ReminderSection title="Today" titleColor="text-accent-deep" tasks={today} onOpenTask={onOpenTask} />
+              <AlertSection title="Today" dotColor="#0A2E5C" tasks={today} readIds={readIds} onOpen={handleOpen} />
             )}
             {later.length > 0 && (
-              <ReminderSection title="Upcoming" titleColor="text-slate-400" tasks={later} onOpenTask={onOpenTask} />
+              <AlertSection title="Upcoming" dotColor="#94a3b8" tasks={later} readIds={readIds} onOpen={handleOpen} />
             )}
           </>
         )}
-
       </div>
     </div>
   )
 }
 
-function ReminderSection({ title, titleColor, tasks, onOpenTask }) {
+function AlertSection({ title, dotColor, tasks, readIds, onOpen }) {
   return (
-    <section>
-      <p className={`text-[11px] font-bold uppercase tracking-widest mb-3 ${titleColor}`}>{title}</p>
-      <div className="space-y-2.5">
-        {tasks.map(task => (
-          <ReminderRow key={task.id} task={task} onOpenTask={onOpenTask} />
+    <div className="mt-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 pb-1">
+        {title}
+      </p>
+      <div className="bg-card-bg border-y border-divider">
+        {tasks.map((task, i) => (
+          <AlertRow
+            key={task.id}
+            task={task}
+            dotColor={dotColor}
+            isRead={readIds.has(task.id)}
+            isLast={i === tasks.length - 1}
+            onOpen={onOpen}
+          />
         ))}
       </div>
-    </section>
+    </div>
   )
 }
 
-function ReminderRow({ task, onOpenTask }) {
+function AlertRow({ task, dotColor, isRead, isLast, onOpen }) {
   const colors = getCategoryColor(task.category)
   const isOverdue = getDateGroup(task.due_date) === 'Overdue'
 
   return (
     <button
-      onClick={() => onOpenTask(task.id)}
-      className="w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] overflow-hidden text-left"
+      onClick={() => onOpen(task.id)}
+      className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors active:bg-app-bg ${
+        !isLast ? 'border-b border-divider' : ''
+      } ${isRead ? 'bg-card-bg' : 'bg-white'}`}
     >
-      <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: isOverdue ? '#ef4444' : colors.border }} />
-      <div className="flex-1 py-3.5 px-3 min-w-0">
-        <p className="text-slate-800 text-sm font-semibold leading-tight truncate">{task.task_name}</p>
-        <p className={`text-xs mt-0.5 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
-          {formatDueDate(task.due_date)}
-        </p>
+      <div className="w-2 shrink-0 flex justify-center">
+        {!isRead && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dotColor }} />}
       </div>
-      <div className="pr-3 flex items-center gap-2 shrink-0">
+
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm leading-snug truncate ${isRead ? 'text-slate-400 font-normal' : 'text-slate-800 font-semibold'}`}>
+          {task.task_name}
+        </p>
         <span
-          className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+          className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1"
           style={{ backgroundColor: colors.bg, color: colors.text }}
         >
           {task.category}
         </span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-slate-300">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
       </div>
+
+      <p className={`shrink-0 text-xs font-medium text-right ${isOverdue ? 'text-red-500' : isRead ? 'text-slate-300' : 'text-slate-400'}`}>
+        {formatDueDate(task.due_date)}
+      </p>
     </button>
   )
 }
 
-
-function EmptyReminders() {
+function EmptyAlerts() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+    <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-5 pt-16">
       <img src={mascot} alt="Ollie" className="w-32 h-32 object-contain mb-2" />
-      <p className="text-slate-400 text-sm">No upcoming reminders</p>
-      <p className="text-slate-300 text-xs mt-1">Tasks with due dates will appear here</p>
+      <p className="text-slate-400 text-sm">No reminders set</p>
+      <p className="text-slate-300 text-xs mt-1">Open any task, set a due date, and enable "Remind me before due"</p>
     </div>
   )
 }
