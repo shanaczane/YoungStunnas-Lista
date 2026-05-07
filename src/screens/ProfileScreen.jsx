@@ -197,22 +197,22 @@ async function handleSignOut() {
                     autoFocus
                     value={nameInput}
                     onChange={e => setNameInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditing(false) }}
-                    className="flex-1 text-slate-900 font-semibold text-base bg-slate-50 border border-black/10 focus:border-accent-deep rounded-xl px-3 py-1.5 outline-none"
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') { setEditing(false); setNameInput(displayName) } }}
+                    className="flex-1 min-w-0 text-slate-900 font-semibold text-sm bg-slate-50 border border-black/10 focus:border-accent-deep rounded-xl px-3 py-2 outline-none"
                     placeholder="Your name"
                   />
                   <button
                     onClick={handleSaveName}
                     disabled={saving}
-                    className="px-3 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-semibold disabled:opacity-50"
+                    className="shrink-0 px-3 py-2 rounded-xl bg-accent-deep text-white text-xs font-semibold disabled:opacity-50"
                   >
                     {saving ? '…' : 'Save'}
                   </button>
                   <button
                     onClick={() => { setEditing(false); setNameInput(displayName) }}
-                    className="px-3 py-1.5 rounded-xl border border-black/10 text-slate-500 text-xs"
+                    className="shrink-0 w-8 h-8 rounded-xl border border-black/10 text-slate-400 text-sm flex items-center justify-center"
                   >
-                    Cancel
+                    ✕
                   </button>
                 </div>
               ) : (
