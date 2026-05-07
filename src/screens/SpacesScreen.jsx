@@ -1231,26 +1231,28 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
       if (!error) { setMembers(prev => [...prev, { user_id: newId, display_name: displayName }]); setMemberInput('') }
       else setMemberError('Could not add member')
     } else {
-      // User ID mode: format LISTA-XXXXXXXX — look up in profiles table
-      const clean = val.toUpperCase().replace(/^LISTA-?/, '').trim()
+      // User ID mode: LISTA-XXXXXXXX → first 8 chars of UUID (no dashes)
+      const clean = val.replace(/^LISTA-?/i, '').trim().toLowerCase()
       if (clean.length < 6) { setMemberError('Invalid User ID — format: LISTA-XXXXXXXX'); setAddingMember(false); return }
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .ilike('user_code', `${clean}%`)
+      // UUID format: xxxxxxxx-xxxx-... so first 8 chars match the code directly
+      const { data: found } = await supabase
+        .from('space_members')
+        .select('user_id, display_name')
+        .ilike('user_id', `${clean}%`)
+        .limit(1)
         .maybeSingle()
-      if (profileErr || !profile) {
-        setMemberError('User not found. Ask them to copy their User ID from their Lista profile.')
+      if (!found) {
+        setMemberError('User not found. Make sure they have created a space first, then share their User ID.')
         setAddingMember(false); return
       }
-      if (members.some(m => m.user_id === profile.id)) {
+      if (members.some(m => m.user_id === found.user_id)) {
         setMemberError('This user is already a member')
         setAddingMember(false); return
       }
       const { error } = await supabase.from('space_members').insert({
-        space_id: space.id, user_id: profile.id, display_name: profile.display_name,
+        space_id: space.id, user_id: found.user_id, display_name: found.display_name,
       })
-      if (!error) { setMembers(prev => [...prev, { user_id: profile.id, display_name: profile.display_name }]); setMemberInput('') }
+      if (!error) { setMembers(prev => [...prev, { user_id: found.user_id, display_name: found.display_name }]); setMemberInput('') }
       else setMemberError('Could not add member')
     }
     setAddingMember(false)
