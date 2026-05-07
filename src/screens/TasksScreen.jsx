@@ -386,7 +386,7 @@ export default function TasksScreen({
 function FilterPill({ label, active, color, onClick, onEdit }) {
   return (
     <div className={`shrink-0 flex items-center rounded-full text-xs font-semibold transition-colors ${
-      active ? 'bg-accent-deep text-white' : 'bg-white text-slate-500 border border-black/10'
+      active ? 'bg-accent-deep text-white' : 'bg-card-bg text-slate-500 border border-black/10'
     }`}>
       <button onClick={onClick} className="flex items-center gap-1.5 pl-3.5 pr-2 py-1.5">
         {color && !active && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}

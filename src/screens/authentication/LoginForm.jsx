@@ -28,7 +28,7 @@ export default function LoginForm() {
         value={password} onChange={setPassword}
         placeholder="Enter your password"
         suffix={
-          <button type="button" onClick={() => setShowPassword(v => !v)} className="text-slate-400 hover:text-slate-600">
+          <button type="button" onClick={() => setShowPassword(v => !v)} className="text-[#7A8AA1] hover:text-[#3A4F6E]">
             {showPassword ? <EyeOff /> : <Eye />}
           </button>
         }
@@ -37,9 +37,9 @@ export default function LoginForm() {
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
-            className="w-4 h-4 rounded border-slate-300 accent-accent-deep"
+            className="w-4 h-4 rounded border-[#C5D3E0] accent-accent-deep"
           />
-          <span className="text-xs text-slate-500">Remember me</span>
+          <span className="text-xs text-[#3A4F6E]">Remember me</span>
         </label>
         <button type="button" className="text-xs text-accent-deep hover:underline">
           Forgot password?

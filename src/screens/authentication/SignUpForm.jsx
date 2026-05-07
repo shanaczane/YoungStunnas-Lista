@@ -38,8 +38,8 @@ export default function SignUpForm({ onSuccess }) {
     return (
       <div className="flex flex-col items-center gap-4 py-4 text-center">
         <div className="w-12 h-12 rounded-full bg-accent-pale flex items-center justify-center text-accent-deep text-2xl font-bold">✓</div>
-        <p className="text-slate-800 font-semibold">Account created!</p>
-        <p className="text-slate-400 text-xs">You can now log in with your credentials.</p>
+        <p className="text-[#0A2240] font-semibold">Account created!</p>
+        <p className="text-[#7A8AA1] text-xs">You can now log in with your credentials.</p>
         <button
           onClick={onSuccess}
           className="w-full bg-accent-deep hover:bg-accent-mid text-white py-3 rounded-xl font-semibold text-sm transition-colors mt-2"
@@ -64,7 +64,7 @@ export default function SignUpForm({ onSuccess }) {
           value={password} onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
           error={errors.password}
           suffix={
-            <button type="button" onClick={() => setShowPassword(v => !v)} className="text-slate-400 hover:text-slate-600">
+            <button type="button" onClick={() => setShowPassword(v => !v)} className="text-[#7A8AA1] hover:text-[#3A4F6E]">
               {showPassword ? <EyeOff /> : <Eye />}
             </button>
           }
