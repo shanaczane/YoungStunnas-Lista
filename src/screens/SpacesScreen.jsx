@@ -109,35 +109,43 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
         ) : spaces.length === 0 ? (
           <EmptySpaces onCreate={() => setShowCreate(true)} />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 pt-4">
             {spaces.map(space => (
               <button
                 key={space.id}
                 onClick={() => setActiveSpace(space)}
-                className="w-full bg-card-bg rounded-2xl p-4 border border-black/8 hover:border-accent-light/30 transition-colors text-left"
+                className="w-full bg-white rounded-2xl p-4 card-elevated flex items-center gap-4 text-left transition-all active:scale-[0.99]"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-white font-semibold">{space.name}</p>
-                  {space.owner_id === session.user.id && (
-                    <span className="text-[10px] text-accent-pale border border-accent-deep/40 px-2 py-0.5 rounded-full">Owner</span>
-                  )}
+                <div className="w-12 h-12 rounded-full bg-accent-pale flex items-center justify-center text-accent-deep font-bold text-lg flex-shrink-0">
+                  {(space.name || '?')[0].toUpperCase()}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {(space.space_members || []).slice(0, 5).map((m, i) => (
-                    <div
-                      key={i}
-                      className="w-6 h-6 rounded-full bg-accent-deep flex items-center justify-center text-white text-[10px] font-semibold border border-app-bg"
-                    >
-                      {(m.display_name || '?')[0].toUpperCase()}
-                    </div>
-                  ))}
-                  {(space.space_members || []).length > 5 && (
-                    <span className="text-white/30 text-xs">+{space.space_members.length - 5}</span>
-                  )}
-                  <span className="text-slate-400 text-xs ml-1">
-                    {(space.space_members || []).length} member{(space.space_members || []).length !== 1 ? 's' : ''}
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-slate-900 font-bold text-base truncate">{space.name}</p>
+                    {space.owner_id === session.user.id && (
+                      <span className="text-[10px] text-accent-deep border border-accent-deep/30 px-2 py-0.5 rounded-full flex-shrink-0">Owner</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {(space.space_members || []).slice(0, 5).map((m, i) => (
+                      <div
+                        key={i}
+                        className="w-5 h-5 rounded-full bg-accent-deep flex items-center justify-center text-white text-[9px] font-semibold"
+                      >
+                        {(m.display_name || '?')[0].toUpperCase()}
+                      </div>
+                    ))}
+                    {(space.space_members || []).length > 5 && (
+                      <span className="text-slate-300 text-xs">+{space.space_members.length - 5}</span>
+                    )}
+                    <span className="text-slate-400 text-xs ml-1">
+                      {(space.space_members || []).length} member{(space.space_members || []).length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
                 </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-200 flex-shrink-0">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
               </button>
             ))}
           </div>
