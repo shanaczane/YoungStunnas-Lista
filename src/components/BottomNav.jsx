@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-export default function BottomNav({ active, onNavigate, onAddTask, onImageCapture }) {
+export default function BottomNav({ active, onNavigate, onAddTask, onImageCapture, alertCount = 0 }) {
   const fileRef = useRef(null)
   const leftTabs = [
     { id: 'home',  label: 'Home',  icon: <HomeIcon /> },
@@ -8,7 +8,7 @@ export default function BottomNav({ active, onNavigate, onAddTask, onImageCaptur
   ]
   const rightTabs = [
     { id: 'spaces',        label: 'Spaces', icon: <SpacesIcon /> },
-    { id: 'notifications', label: 'Alerts', icon: <BellIcon /> },
+    { id: 'notifications', label: 'Alerts', icon: <BellIcon />, badge: alertCount || null },
   ]
 
   return (
@@ -44,13 +44,13 @@ export default function BottomNav({ active, onNavigate, onAddTask, onImageCaptur
       </div>
 
       {rightTabs.map(tab => (
-        <TabButton key={tab.id} tab={tab} active={active} onNavigate={onNavigate} />
+        <TabButton key={tab.id} tab={tab} active={active} onNavigate={onNavigate} badge={tab.badge} />
       ))}
     </nav>
   )
 }
 
-function TabButton({ tab, active, onNavigate }) {
+function TabButton({ tab, active, onNavigate, badge }) {
   const isActive = active === tab.id
   return (
     <button
@@ -59,7 +59,14 @@ function TabButton({ tab, active, onNavigate }) {
         isActive ? 'text-accent-deep' : 'text-slate-400'
       }`}
     >
-      {tab.icon}
+      <div className="relative">
+        {tab.icon}
+        {badge && (
+          <span className="absolute -top-1 -right-1.5 min-w-3.5 h-3.5 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
+      </div>
       <span className={`text-[10px] font-semibold mt-0.5 ${isActive ? 'text-accent-deep' : 'text-slate-400'}`}>
         {tab.label}
       </span>
