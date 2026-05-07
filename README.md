@@ -1,6 +1,6 @@
 # Lista
 
-Lista is an AI-powered productivity web application that allows users to create tasks naturally using plain language. Instead of manually setting due dates, categories, reminders, and assignments, users can simply type the way they normally think, and the AI automatically organizes everything.
+Lista is an AI-powered productivity web application that allows users to create and organize tasks using natural language. Instead of manually setting due dates, reminders, categories, and assignments, users can simply type the way they naturally think while the AI automatically structures and organizes the task for them.
 
 Built during the DevKada Hackathon 2026.
 
@@ -8,14 +8,14 @@ Built during the DevKada Hackathon 2026.
 
 ## Overview
 
-Most productivity applications require too much manual setup before users can save a task. Users are often forced to:
+Traditional productivity apps often require too much setup before users can even save a task. Users are usually forced to manually:
 - Create projects
 - Select categories
 - Set due dates
 - Configure reminders
-- Organize tasks manually
+- Organize tasks
 
-Lista removes this friction by using AI-powered natural language parsing.
+Lista removes this friction by using AI-powered natural language task parsing.
 
 Example:
 
@@ -27,24 +27,24 @@ The system automatically extracts:
 - Category
 - Assignee
 
-This allows users to capture tasks in seconds without interrupting their workflow.
+This allows users to capture tasks quickly without interrupting their workflow.
 
 ---
 
 ## Features
 
 ### Natural Language Task Input
-Users can create tasks using normal conversational text without following a specific format.
+Users can create tasks using plain conversational text without following a strict format.
 
-### AI Task Parsing
-The AI automatically extracts:
+### AI-Powered Task Parsing
+Using Ollama, the app automatically extracts:
 - Task name
 - Due date
 - Category
 - Assignee
 
 ### Automatic Categorization
-Tasks are automatically grouped into categories:
+Tasks are intelligently organized into categories such as:
 - School
 - Work
 - Personal
@@ -52,7 +52,7 @@ Tasks are automatically grouped into categories:
 - Health
 
 ### Smart Reminders
-The system automatically schedules reminders based on detected due dates.
+Automatic reminders are scheduled based on detected due dates.
 
 ### Task Dashboard
 Users can:
@@ -62,16 +62,16 @@ Users can:
 - Organize tasks by due date
 
 ### Shared Spaces
-Users can create collaborative spaces for teams or groups.
+Collaborative spaces allow teams and groups to manage shared tasks together.
 
 ### Automatic Task Assignment
-Tasks mentioning a teammate’s name can automatically assign to that person.
+Tasks mentioning a teammate’s name can automatically assign the task to that person.
 
 ### Manual Editing
-Users can manually edit AI-generated fields if corrections are needed.
+Users can edit AI-generated fields whenever adjustments are needed.
 
 ### Real-Time Synchronization
-Tasks update instantly across devices using Supabase Realtime.
+Task updates sync instantly across devices using Supabase Realtime.
 
 ### Progressive Web App (PWA)
 Lista is installable on both Android and iOS devices directly from the browser.
@@ -96,6 +96,12 @@ Lista is installable on both Android and iOS devices directly from the browser.
 
 ---
 
+## Live Demo
+
+https://lista-orpin.vercel.app
+
+---
+
 ## Project Structure
 
 ```bash
@@ -117,13 +123,13 @@ src/
 Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/teamname-projectname.git
+git clone https://github.com/shanaczane/YoungStunnas-Lista.git
 ```
 
 Navigate into the project folder:
 
 ```bash
-cd teamname-projectname
+cd YoungStunnas-Lista
 ```
 
 Install dependencies:
@@ -180,18 +186,12 @@ Submit thesis draft by Friday and send it to Mark
 3. AI processes the text
 4. Structured task data is returned
 5. Task is automatically categorized and saved
-6. Reminders are scheduled automatically
+6. Smart reminders are scheduled automatically
 7. Tasks sync in real time across devices
 
 ---
 
-## Live Demo
-
-https://lista-orpin.vercel.app
-
----
-
-## GitHub Repository Rules Compliance
+## GitHub Rules Compliance
 
 This project was built entirely during the DevKada Hackathon sprint period from May 3 to May 7, 2026.
 
@@ -201,6 +201,20 @@ The project:
 - Contains a complete README.md
 - Uses AI assistance responsibly
 - Includes a deployed live version for testing
+
+---
+
+## Future Improvements
+
+Planned future features include:
+- AI assistant chat
+- Productivity analytics
+- Task summaries
+- Completion streaks
+- Calendar integrations
+- Voice input
+- File attachments
+- Advanced recurring tasks
 
 ---
 
