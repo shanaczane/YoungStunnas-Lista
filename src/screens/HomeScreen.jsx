@@ -7,6 +7,7 @@ import homeMascot from '../mascots/home-mascot.png'
 import { parseTask, parseImageList, detectChecklist, encodeChecklist, isChecklist, getChecklistItems, cleanInput } from '../lib/ai'
 import { formatDueDate } from '../lib/utils'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
+import { CategoryIcon } from '../lib/icons'
 
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
@@ -301,7 +302,7 @@ export default function HomeScreen({
                     {showSortMenu && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
-                        <div className="absolute right-0 top-9 z-20 bg-card-bg rounded-2xl shadow-xl border border-divider overflow-hidden min-w-[160px]">
+                        <div className="absolute right-0 top-9 z-20 bg-card-bg rounded-2xl shadow-xl border border-divider overflow-hidden min-w-40">
                           {SORT_MODES.map(mode => (
                             <button
                               key={mode}
@@ -402,7 +403,7 @@ export default function HomeScreen({
                     <div className="space-y-2.5">
                       {parseCard.checklistItems.map((item, i) => (
                         <div key={i} className="flex items-center gap-3 group">
-                          <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                          <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />
                           <input
                             ref={el => { itemRefs.current[i] = el }}
                             type="text"
@@ -434,7 +435,7 @@ export default function HomeScreen({
                           <button
                             type="button"
                             onClick={() => handleEditField('checklistItems', parseCard.checklistItems.filter((_, j) => j !== i))}
-                            className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                            className="text-slate-200 hover:text-red-400 text-sm leading-none opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                           >✕</button>
                         </div>
                       ))}
@@ -447,7 +448,7 @@ export default function HomeScreen({
                         }}
                         className="flex items-center gap-3 text-slate-400 hover:text-accent-deep transition-colors mt-1"
                       >
-                        <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 text-xs">+</div>
+                        <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center shrink-0 text-xs">+</div>
                         <span className="text-sm">Add item</span>
                       </button>
                     </div>
@@ -482,12 +483,12 @@ export default function HomeScreen({
                         key={cat.name}
                         type="button"
                         onClick={() => handleEditField('category', cat.name)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
+                        className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
                           isSelected ? '' : 'opacity-55 hover:opacity-80'
                         }`}
                         style={{ backgroundColor: catColors.bg, color: catColors.text, ...(isSelected ? { outline: `2px solid ${catColors.border}`, outlineOffset: '2px' } : {}) }}
                       >
-                        <span>{cat.emoji || '📁'}</span>
+                        <CategoryIcon name={cat.name} iconId={cat.emoji} size={11} color={catColors.text} />
                         <span>{cat.name}</span>
                         {isSelected && (
                           <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
@@ -503,7 +504,7 @@ export default function HomeScreen({
                     <button
                       type="button"
                       onClick={() => setAddingCategory(true)}
-                      className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
+                      className="shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-accent-pale hover:text-accent-deep text-base font-medium transition-colors"
                     >
                       +
                     </button>

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
-import { BUILT_IN_CATEGORIES, getCategoryColor, getCategoryEmoji, createCategory } from '../lib/categories'
+import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
+import { CategoryIcon } from '../lib/icons'
 import { isChecklist, getChecklistItems, getChecklistTitle, encodeChecklist } from '../lib/ai'
 
 const REMINDER_OPTIONS = [
@@ -100,7 +101,6 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
               {allCategories.map(cat => {
                 const isSelected = category === cat.name
                 const catColors  = getCategoryColor(cat.name, categories)
-                const catEmoji   = getCategoryEmoji(cat.name, categories)
                 return (
                   <button
                     key={cat.name}
@@ -114,7 +114,7 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
                       ...(isSelected ? { outline: `2px solid ${catColors.border}`, outlineOffset: '2px' } : {}),
                     }}
                   >
-                    <span>{catEmoji}</span>
+                    <CategoryIcon name={cat.name} iconId={cat.emoji} size={11} color={catColors.text} />
                     <span>{cat.name}</span>
                     {isSelected && (
                       <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
