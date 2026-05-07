@@ -1263,7 +1263,8 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
   }
 
   function handleCopyLink() {
-    const url = `${window.location.origin}?join=${space.id}`
+    const base = import.meta.env.VITE_APP_URL || 'https://lista-orpin.vercel.app'
+    const url = `${base}?join=${space.id}`
     navigator.clipboard.writeText(url).then(() => {
       setLinkCopied(true)
       setTimeout(() => setLinkCopied(false), 2500)

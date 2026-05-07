@@ -366,27 +366,15 @@ export default function HomeScreen({
                       className={`w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] cursor-pointer overflow-hidden ${isSelected ? 'ring-2 ring-accent-deep' : ''}`}
                     >
                       <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: catColors?.border }} />
-                      {/* Checkbox — LEFT side, no button-in-button */}
-                      <button
-                        onClick={e => {
-                          e.stopPropagation()
-                          if (selectMode) toggleSelect(task.id)
-                          else onTaskUpdated?.(task.id, { is_complete: !task.is_complete })
-                        }}
-                        className="w-11 h-11 flex items-center justify-center flex-shrink-0"
-                      >
-                        {selectMode ? (
+                      {selectMode && (
+                        <div className="w-11 h-11 flex items-center justify-center flex-shrink-0">
                           <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-accent-deep border-accent-deep' : 'border-slate-300'}`}>
                             {isSelected && <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                           </div>
-                        ) : (
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${task.is_complete ? 'bg-accent-deep border-accent-deep' : 'border-slate-200'}`}>
-                            {task.is_complete && <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M10 3L5 8.5 2 5.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          </div>
-                        )}
-                      </button>
-                      <div className="flex-1 min-w-0 py-3.5 pr-4">
-                        <p className={`text-sm font-semibold leading-tight ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-900'}`}>
+                        </div>
+                      )}
+                      <div className={`flex-1 min-w-0 py-3.5 pr-4 ${selectMode ? '' : 'pl-4'}`}>
+                        <p className="text-sm font-semibold leading-tight text-slate-900">
                           {task.task_name}
                         </p>
                         <div className="flex items-center gap-1.5 mt-0.5">
