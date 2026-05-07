@@ -21,6 +21,33 @@ function memberColor(name = '') {
   return IDENTITY_COLORS[Math.abs(hash) % IDENTITY_COLORS.length]
 }
 
+// Look up avatar_url from a members array by display_name
+function getMemberAvatar(name, members) {
+  if (!name || !members) return null
+  return members.find(m => m.display_name?.toLowerCase() === name.toLowerCase())?.avatar_url || null
+}
+
+// Avatar that shows Google profile pic when available, colored initial as fallback
+function MemberAvatar({ name, avatarUrl, sizePx = 32, fontSize = 11, className = '' }) {
+  const [failed, setFailed] = useState(false)
+  const initial = (name || '?')[0].toUpperCase()
+  return avatarUrl && !failed ? (
+    <img
+      src={avatarUrl} alt={name}
+      className={`rounded-full object-cover flex-shrink-0 ${className}`}
+      style={{ width: sizePx, height: sizePx }}
+      onError={() => setFailed(true)}
+    />
+  ) : (
+    <div
+      className={`rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${className}`}
+      style={{ width: sizePx, height: sizePx, backgroundColor: memberColor(name || ''), fontSize }}
+    >
+      {initial}
+    </div>
+  )
+}
+
 const CATEGORIES = ['Work','Personal','School','Errands','Health']
 const PINNED_KEY = 'lista_pinned_spaces'
 
@@ -41,7 +68,7 @@ function formatActivityTime(date) {
 // ── Spaces list ───────────────────────────────────────────────────────────────
 const ACTIVE_SPACE_KEY = 'lista_active_space'
 
-export default function SpacesScreen({ session, displayName, onNavigate }) {
+export default function SpacesScreen({ session, displayName, onNavigate, openSpaceId }) {
   const [spaces, setSpaces] = useState([])
   const [activeSpace, setActiveSpace] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -49,22 +76,53 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
   const [editingSpace, setEditingSpace] = useState(null)
   const [spacePreviews, setSpacePreviews] = useState({})
   const [spaceTimestamps, setSpaceTimestamps] = useState({})
+  const [invites, setInvites] = useState([])
   const [pinnedIds, setPinnedIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem(PINNED_KEY) || '[]') }
     catch { return [] }
   })
   const pendingSpaceId = useRef(sessionStorage.getItem(ACTIVE_SPACE_KEY))
+  const myCode = session.user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
 
   useEffect(() => {
     localStorage.setItem(PINNED_KEY, JSON.stringify(pinnedIds))
   }, [pinnedIds])
 
-  useEffect(() => { fetchSpaces() }, [session.user.id])
+  useEffect(() => { fetchSpaces(); fetchInvites() }, [session.user.id])
 
-  // Restore active space after spaces load (only if not explicitly closed)
+  async function fetchInvites() {
+    const email = session.user.email || ''
+    const { data } = await supabase
+      .from('space_invites')
+      .select('*')
+      .eq('status', 'pending')
+      .or(`user_code.eq.${myCode},invited_email.eq.${email}`)
+      .order('created_at', { ascending: false })
+    if (data) setInvites(data)
+  }
+
+  async function handleAcceptInvite(invite) {
+    const already = await supabase.from('space_members').select('user_id').eq('space_id', invite.space_id).eq('user_id', session.user.id).maybeSingle()
+    if (!already.data) {
+      const myAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+      await supabase.from('space_members').insert({ space_id: invite.space_id, user_id: session.user.id, display_name: displayName, avatar_url: myAvatar })
+    }
+    await supabase.from('space_invites').update({ status: 'accepted' }).eq('id', invite.id)
+    setInvites(prev => prev.filter(i => i.id !== invite.id))
+    fetchSpaces()
+  }
+
+  async function handleDeclineInvite(invite) {
+    await supabase.from('space_invites').update({ status: 'declined' }).eq('id', invite.id)
+    setInvites(prev => prev.filter(i => i.id !== invite.id))
+  }
+
+  // Restore active space after spaces load (session restore OR invite join)
   useEffect(() => {
-    if (pendingSpaceId.current && spaces.length > 0 && !activeSpace) {
-      const found = spaces.find(s => s.id === pendingSpaceId.current)
+    if (spaces.length === 0 || activeSpace) return
+    const targetId = openSpaceId || pendingSpaceId.current
+    if (targetId) {
+      const found = spaces.find(s => s.id === targetId)
       if (found) {
         pendingSpaceId.current = null
         setActiveSpace(found)
@@ -74,10 +132,21 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
 
   async function fetchSpaces() {
     setLoading(true)
+    // Get all spaces where user is a member (includes owned spaces since owner is always added)
+    const { data: memberOf } = await supabase
+      .from('space_members')
+      .select('space_id')
+      .eq('user_id', session.user.id)
+    const spaceIds = (memberOf || []).map(m => m.space_id)
+    if (!spaceIds.length) {
+      setSpaces([])
+      setLoading(false)
+      return
+    }
     const { data } = await supabase
       .from('spaces')
       .select('*, space_members(user_id, display_name)')
-      .eq('owner_id', session.user.id)
+      .in('id', spaceIds)
       .order('created_at', { ascending: false })
     const fetched = data || []
     setSpaces(fetched)
@@ -143,7 +212,8 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
     const { data, error } = await supabase
       .from('spaces').insert({ name, description, color, owner_id: session.user.id }).select().single()
     if (!error && data) {
-      await supabase.from('space_members').insert({ space_id: data.id, user_id: session.user.id, display_name: displayName })
+      const myAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+      await supabase.from('space_members').insert({ space_id: data.id, user_id: session.user.id, display_name: displayName, avatar_url: myAvatar })
       const created = { ...data, description, color, space_members: [{ user_id: session.user.id, display_name: displayName }] }
       setSpaces(prev => [created, ...prev])
       openSpace(created)
@@ -204,6 +274,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
         <SpaceSettingsModal
           space={editingSpace}
           session={session}
+          displayName={displayName}
           onSave={async updates => {
             await supabase.from('spaces').update(updates).eq('id', editingSpace.id)
             setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, ...updates } : s))
@@ -215,13 +286,41 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
       )}
 
       <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4">
+        {/* Pending invites */}
+        {invites.length > 0 && (
+          <div className="flex flex-col gap-2.5 mb-4">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Pending Invites</p>
+            {invites.map(invite => (
+              <div key={invite.id} className="rounded-2xl bg-accent-pale border border-accent-light/40 px-4 py-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent-deep/10 flex items-center justify-center text-accent-deep font-bold text-lg flex-shrink-0">
+                  {(invite.space_name || '?')[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-900 font-bold text-sm truncate">{invite.space_name}</p>
+                  <p className="text-slate-500 text-xs">{invite.invited_by_name} invited you</p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleDeclineInvite(invite)}
+                    className="px-3 py-1.5 rounded-xl border border-black/10 text-slate-500 text-xs font-semibold"
+                  >Decline</button>
+                  <button
+                    onClick={() => handleAcceptInvite(invite)}
+                    className="px-3 py-1.5 rounded-xl bg-accent-deep text-white text-xs font-bold"
+                  >Join</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center pt-20">
             <div className="w-6 h-6 border-2 border-accent-light border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : spaces.length === 0 ? (
+        ) : spaces.length === 0 && invites.length === 0 ? (
           <EmptySpaces onCreate={() => setShowCreate(true)} />
-        ) : (
+        ) : spaces.length === 0 ? null : (
           <div className="flex flex-col gap-3">
             {sorted.map(space => {
               const spaceColor = space.color || '#818CF8'
@@ -328,7 +427,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 
   const fetchMembers = useCallback(async () => {
     const { data } = await supabase
-      .from('space_members').select('user_id, display_name').eq('space_id', spaceData.id)
+      .from('space_members').select('user_id, display_name, avatar_url').eq('space_id', spaceData.id)
     if (data) setMembers(data)
   }, [spaceData.id])
 
@@ -543,9 +642,8 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
                 <div className="flex -space-x-1">
                   {members.slice(0, 5).map((m, i) => (
                     <button key={i} onClick={() => openMemberProfile(m.display_name)}
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold border-2 border-app-bg transition-transform active:scale-90"
-                      style={{ backgroundColor: memberColor(m.display_name || '') }}>
-                      {(m.display_name || '?')[0].toUpperCase()}
+                      className="rounded-full overflow-hidden border-2 border-app-bg transition-transform active:scale-90 flex-shrink-0">
+                      <MemberAvatar name={m.display_name || ''} avatarUrl={m.avatar_url} sizePx={20} fontSize={8} />
                     </button>
                   ))}
                 </div>
@@ -735,9 +833,8 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
               <div key={member} className="space-y-2">
                 <div className="flex items-center gap-2 px-1 pt-1">
                   <button onClick={() => openMemberProfile(member)}
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 transition-transform active:scale-90"
-                    style={{ backgroundColor: memberColor(member) }}>
-                    {member[0].toUpperCase()}
+                    className="rounded-full overflow-hidden flex-shrink-0 transition-transform active:scale-90">
+                    <MemberAvatar name={member} avatarUrl={getMemberAvatar(member, members)} sizePx={24} fontSize={10} />
                   </button>
                   <span className="text-slate-600 text-xs font-bold">{member}</span>
                   <span className="text-slate-300 text-xs">· {memberTasks.length}</span>
@@ -808,7 +905,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 
       {showSettings && (
         <SpaceSettingsModal
-          space={spaceData} session={session}
+          space={spaceData} session={session} displayName={displayName}
           onSave={handleSpaceSave}
           onDelete={handleSpaceDelete}
           onClose={() => { setShowSettings(false); fetchMembers() }}
@@ -903,16 +1000,14 @@ function SpaceTaskCard({ task, members, spaceColor, themeColor, onToggle, onClic
         <div className="relative flex flex-col items-center">
           {effectiveAssignee && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(effectiveAssignee) }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white transition-transform active:scale-90"
-              style={{ backgroundColor: memberColor(effectiveAssignee) }}>
-              {effectiveAssignee[0].toUpperCase()}
+              className="rounded-full overflow-hidden ring-2 ring-white transition-transform active:scale-90">
+              <MemberAvatar name={effectiveAssignee} avatarUrl={getMemberAvatar(effectiveAssignee, members)} sizePx={32} fontSize={11} />
             </button>
           )}
           {creatorName && !sameAsCreator && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}
-              style={{ backgroundColor: memberColor(creatorName) }}>
-              {creatorName[0].toUpperCase()}
+              className={`rounded-full overflow-hidden ring-2 ring-white transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}>
+              <MemberAvatar name={creatorName} avatarUrl={getMemberAvatar(creatorName, members)} sizePx={24} fontSize={10} />
             </button>
           )}
         </div>
@@ -1190,22 +1285,26 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
 }
 
 // ── Space settings modal ──────────────────────────────────────────────────────
-function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMemberClick }) {
+function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onClose, onMemberClick }) {
   const [name, setName] = useState(space.name || '')
   const [description, setDescription] = useState(space.description || '')
   const [color, setColor] = useState(space.color || null)
   const [members, setMembers] = useState(space.space_members || [])
-  const [addMode, setAddMode] = useState('email') // 'email' | 'username'
+  const [addMode, setAddMode] = useState('email') // 'email' | 'userid'
   const [memberInput, setMemberInput] = useState('')
   const [memberError, setMemberError] = useState('')
+  const [memberSuccess, setMemberSuccess] = useState('')
   const [addingMember, setAddingMember] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmRemoveId, setConfirmRemoveId] = useState(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [sentInvites, setSentInvites] = useState([])
 
   useEffect(() => {
-    supabase.from('space_members').select('user_id, display_name').eq('space_id', space.id)
+    supabase.from('space_members').select('user_id, display_name, avatar_url').eq('space_id', space.id)
       .then(({ data }) => { if (data) setMembers(data) })
+    supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
+      .then(({ data }) => { if (data) setSentInvites(data) })
   }, [space.id])
 
   async function handleAddMember() {
@@ -1219,39 +1318,45 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
         setMemberError('Enter a valid email address')
         setAddingMember(false); return
       }
-      const displayName = val.split('@')[0]
-      if (members.some(m => m.display_name?.toLowerCase() === displayName.toLowerCase())) {
-        setMemberError('This person is already a member')
-        setAddingMember(false); return
-      }
-      const newId = crypto.randomUUID()
-      const { error } = await supabase.from('space_members').insert({
-        space_id: space.id, user_id: newId, display_name: displayName,
+      const senderName = displayName || session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'Someone'
+      const { error } = await supabase.from('space_invites').insert({
+        space_id: space.id,
+        space_name: space.name,
+        invited_by_name: senderName,
+        user_code: '',
+        invited_email: val.toLowerCase(),
+        status: 'pending',
       })
-      if (!error) { setMembers(prev => [...prev, { user_id: newId, display_name: displayName }]); setMemberInput('') }
-      else setMemberError('Could not add member')
+      if (!error) {
+        setMemberInput('')
+        setMemberSuccess(`Invite sent to ${val}! They'll see it when they open Lista.`)
+        setTimeout(() => setMemberSuccess(''), 3000)
+        supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
+          .then(({ data }) => { if (data) setSentInvites(data) })
+      } else {
+        setMemberError('Could not send invite.')
+      }
     } else {
-      // User ID mode: format LISTA-XXXXXXXX — look up in profiles table
-      const clean = val.toUpperCase().replace(/^LISTA-?/, '').trim()
+      // User ID mode: send invite — they'll see it on their Spaces page
+      const clean = val.replace(/^LISTA-?/i, '').trim().toUpperCase()
       if (clean.length < 6) { setMemberError('Invalid User ID — format: LISTA-XXXXXXXX'); setAddingMember(false); return }
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .ilike('user_code', `${clean}%`)
-        .maybeSingle()
-      if (profileErr || !profile) {
-        setMemberError('User not found. Ask them to copy their User ID from their Lista profile.')
-        setAddingMember(false); return
-      }
-      if (members.some(m => m.user_id === profile.id)) {
-        setMemberError('This user is already a member')
-        setAddingMember(false); return
-      }
-      const { error } = await supabase.from('space_members').insert({
-        space_id: space.id, user_id: profile.id, display_name: profile.display_name,
+      const senderName = displayName || session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'Someone'
+      const { error } = await supabase.from('space_invites').insert({
+        space_id: space.id,
+        space_name: space.name,
+        invited_by_name: senderName,
+        user_code: clean,
+        status: 'pending',
       })
-      if (!error) { setMembers(prev => [...prev, { user_id: profile.id, display_name: profile.display_name }]); setMemberInput('') }
-      else setMemberError('Could not add member')
+      if (!error) {
+        setMemberInput('')
+        setMemberSuccess('Invite sent! They\'ll see it when they open Lista.')
+        setTimeout(() => setMemberSuccess(''), 3000)
+        supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
+          .then(({ data }) => { if (data) setSentInvites(data) })
+      } else {
+        setMemberError('Could not send invite. Make sure the space_invites table exists in Supabase.')
+      }
     }
     setAddingMember(false)
   }
@@ -1263,7 +1368,8 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
   }
 
   function handleCopyLink() {
-    const url = `${window.location.origin}?join=${space.id}`
+    const base = import.meta.env.VITE_APP_URL || 'https://lista-orpin.vercel.app'
+    const url = `${base}?join=${space.id}`
     navigator.clipboard.writeText(url).then(() => {
       setLinkCopied(true)
       setTimeout(() => setLinkCopied(false), 2500)
@@ -1355,10 +1461,7 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
                       onClick={() => onMemberClick?.(m.display_name)}
                       className="flex items-center gap-3 flex-1 text-left min-w-0"
                     >
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                        style={{ backgroundColor: memberColor(m.display_name || '') }}>
-                        {(m.display_name || '?')[0].toUpperCase()}
-                      </div>
+                      <MemberAvatar name={m.display_name || ''} avatarUrl={m.avatar_url} sizePx={32} fontSize={13} />
                       <div className="flex-1 min-w-0">
                         <p className="text-slate-700 text-sm font-medium truncate">{m.display_name}</p>
                         {m.user_id === session.user.id && (
@@ -1387,6 +1490,23 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
                       <button onClick={() => handleRemoveMember(m.user_id)} className="text-white text-xs px-2.5 py-1 rounded-lg bg-red-500 font-semibold">Remove</button>
                     </div>
                   )}
+                </div>
+              ))}
+              {/* Pending invites sent from this space */}
+              {sentInvites.map(inv => (
+                <div key={inv.id} className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 text-sm font-bold flex-shrink-0">?</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700 text-sm font-medium truncate">{inv.invited_email || `LISTA-${inv.user_code}`}</p>
+                    <p className="text-amber-500 text-[10px]">Invite pending</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await supabase.from('space_invites').update({ status: 'declined' }).eq('id', inv.id)
+                      setSentInvites(prev => prev.filter(i => i.id !== inv.id))
+                    }}
+                    className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0 text-xs"
+                  >✕</button>
                 </div>
               ))}
             </div>
@@ -1423,6 +1543,7 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
               </button>
             </div>
             {memberError && <p className="text-red-500 text-xs mt-1.5">{memberError}</p>}
+            {memberSuccess && <p className="text-green-600 text-xs mt-1.5">{memberSuccess}</p>}
           </div>
 
           <div className="border-t border-slate-100 pt-4">
@@ -2295,10 +2416,9 @@ function MemberView({ tasks, members, inProgressIds, modifications, spaceColor, 
               {/* Avatar — tapping opens profile */}
               <button
                 onClick={e => { e.stopPropagation(); onMemberClick?.(name) }}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 transition-transform active:scale-90"
-                style={{ backgroundColor: memberColor(name) }}
+                className="rounded-full overflow-hidden flex-shrink-0 transition-transform active:scale-90"
               >
-                {name[0]?.toUpperCase() || '?'}
+                <MemberAvatar name={name} avatarUrl={member.avatar_url} sizePx={40} fontSize={14} />
               </button>
 
               <div className="flex-1 min-w-0">
