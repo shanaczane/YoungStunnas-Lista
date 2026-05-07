@@ -255,7 +255,7 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-black/15 text-slate-700 text-xs font-semibold transition-colors active:bg-slate-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-card-bg border border-divider text-slate-700 text-xs font-semibold transition-colors active:bg-slate-50"
             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
@@ -302,7 +302,7 @@ export default function SpacesScreen({ session, displayName, onNavigate, openSpa
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => handleDeclineInvite(invite)}
-                    className="px-3 py-1.5 rounded-xl border border-black/10 text-slate-500 text-xs font-semibold"
+                    className="px-3 py-1.5 rounded-xl border border-divider text-slate-500 text-xs font-semibold"
                   >Decline</button>
                   <button
                     onClick={() => handleAcceptInvite(invite)}
@@ -688,7 +688,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
         <div className="px-5 pb-2 flex items-center gap-2">
           <button
             onClick={() => setShowFilterBar(v => !v)}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${activeFilterCount > 0 ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${activeFilterCount > 0 ? 'bg-accent-deep text-white' : 'border border-divider text-slate-400'}`}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
@@ -702,7 +702,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
               { id: 'members', label: 'Members', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
             ].map(v => (
               <button key={v.id} onClick={() => setViewMode(v.id)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${viewMode === v.id ? 'bg-white text-accent-deep shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${viewMode === v.id ? 'bg-card-bg text-accent-deep shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                 {v.icon}{v.label}
               </button>
             ))}
@@ -713,13 +713,13 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 
       {/* Expanded filters — floats over task list */}
       {showFilterBar && (
-        <div className="absolute top-full left-0 right-0 z-10 mx-4 rounded-2xl bg-card-bg border border-black/8 shadow-xl px-4 py-3 space-y-2.5">
+        <div className="absolute top-full left-0 right-0 z-10 mx-4 rounded-2xl bg-card-bg border border-divider shadow-xl px-4 py-3 space-y-2.5">
           <div className="flex items-center gap-2">
             <span className="text-slate-400 text-[11px] w-16 flex-shrink-0 font-medium">Status</span>
             <div className="flex gap-1.5">
               {['all','active','done'].map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize transition-colors ${statusFilter === s ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}>
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize transition-colors ${statusFilter === s ? 'bg-accent-deep text-white' : 'border border-divider text-slate-400'}`}>
                   {s}
                 </button>
               ))}
@@ -746,7 +746,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
               <div className="flex gap-1.5 flex-wrap">
                 {members.map(m => (
                   <button key={m.user_id} onClick={() => setMemberFilter(memberFilter === m.display_name ? null : m.display_name)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${memberFilter === m.display_name ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}>
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${memberFilter === m.display_name ? 'bg-accent-deep text-white' : 'border border-divider text-slate-400'}`}>
                     {m.display_name}
                   </button>
                 ))}
@@ -758,7 +758,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             <div className="flex gap-1.5 flex-wrap">
               {[['created','Recent'],['due','Due'],['alpha','A–Z'],['assignee','Assignee']].map(([val, label]) => (
                 <button key={val} onClick={() => setSortBy(val)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${sortBy === val ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}>
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${sortBy === val ? 'bg-accent-deep text-white' : 'border border-divider text-slate-400'}`}>
                   {label}
                 </button>
               ))}
@@ -863,7 +863,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
       {/* Bottom input */}
       <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
-          <div className="rounded-2xl p-4 card-elevated-lg" style={{ backgroundColor: spaceData.color ? spaceData.color + '28' : '#ffffff' }}>
+          <div className="rounded-2xl p-4 card-elevated-lg" style={{ backgroundColor: spaceData.color ? spaceData.color + '28' : 'var(--color-card-bg)' }}>
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">AI Parsed · Space Task</p>
             <p className="text-slate-800 text-sm font-semibold">{parseCard.task}</p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -877,13 +877,13 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
               {parseCard.assignee && <span className="text-accent-deep text-xs font-medium">→ {parseCard.assignee}</span>}
             </div>
             <div className="flex gap-2 mt-3">
-              <button onClick={() => setParseCard(null)} className="flex-1 py-2.5 rounded-xl border border-black/10 text-slate-500 text-sm font-medium">Cancel</button>
+              <button onClick={() => setParseCard(null)} className="flex-1 py-2.5 rounded-xl border border-divider text-slate-500 text-sm font-medium">Cancel</button>
               <button onClick={handleConfirm} className="flex-1 py-2.5 rounded-xl bg-accent-deep text-white text-sm font-bold">Add to Space</button>
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 border border-black/10 rounded-2xl px-4 py-3 shadow-sm"
-          style={{ backgroundColor: spaceData.color ? spaceData.color + '28' : '#ffffff' }}>
+        <div className="flex items-center gap-2 border border-divider rounded-2xl px-4 py-3 shadow-sm"
+          style={{ backgroundColor: spaceData.color ? spaceData.color + '28' : 'var(--color-card-bg)' }}>
           <input
             ref={inputRef} type="text" value={input}
             onChange={e => setInput(e.target.value)}
@@ -966,7 +966,7 @@ function SpaceTaskCard({ task, members, spaceColor, themeColor, onToggle, onClic
   return (
     <div
       className="rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99] cursor-pointer"
-      style={{ backgroundColor: themeColor ? themeColor + '28' : '#ffffff' }}
+      style={{ backgroundColor: themeColor ? themeColor + '28' : 'var(--color-card-bg)' }}
       onClick={onClick}
     >
       <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: colors.border }} />
@@ -1000,13 +1000,13 @@ function SpaceTaskCard({ task, members, spaceColor, themeColor, onToggle, onClic
         <div className="relative flex flex-col items-center">
           {effectiveAssignee && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(effectiveAssignee) }}
-              className="rounded-full overflow-hidden ring-2 ring-white transition-transform active:scale-90">
+              className="rounded-full overflow-hidden ring-2 ring-card-bg transition-transform active:scale-90">
               <MemberAvatar name={effectiveAssignee} avatarUrl={getMemberAvatar(effectiveAssignee, members)} sizePx={32} fontSize={11} />
             </button>
           )}
           {creatorName && !sameAsCreator && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
-              className={`rounded-full overflow-hidden ring-2 ring-white transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}>
+              className={`rounded-full overflow-hidden ring-2 ring-card-bg transition-transform active:scale-90 ${effectiveAssignee ? '-mt-2' : ''}`}>
               <MemberAvatar name={creatorName} avatarUrl={getMemberAvatar(creatorName, members)} sizePx={24} fontSize={10} />
             </button>
           )}
@@ -1194,7 +1194,7 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setAssignee('')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${!assignee ? 'bg-slate-200 text-slate-700' : 'border border-black/10 text-slate-400'}`}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${!assignee ? 'bg-slate-200 text-slate-700' : 'border border-divider text-slate-400'}`}
               >
                 Unassigned
               </button>
@@ -1202,7 +1202,7 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
                 <button
                   key={m.user_id}
                   onClick={() => setAssignee(m.display_name)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${assignee === m.display_name ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${assignee === m.display_name ? 'bg-accent-deep text-white' : 'border border-divider text-slate-400'}`}
                 >
                   {m.display_name}
                 </button>
@@ -1269,7 +1269,7 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
             className={`w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
               confirmDelete
                 ? 'bg-red-500 text-white active:bg-red-600'
-                : 'bg-red-50 text-red-500 hover:bg-red-100'
+                : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
             }`}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1424,7 +1424,7 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
           <div className="mb-4">
             <p className="text-slate-500 text-xs font-semibold mb-1.5 uppercase tracking-wide">Space Name</p>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep transition-colors" />
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-divider focus:border-accent-deep transition-colors" />
           </div>
 
           <div className="mb-4">
@@ -1432,7 +1432,7 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
               Description <span className="normal-case font-normal text-slate-300">(optional)</span>
             </p>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep resize-none transition-colors" />
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-divider focus:border-accent-deep resize-none transition-colors" />
           </div>
 
           <div className="mb-5">
@@ -1484,7 +1484,7 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
                     )}
                   </div>
                   {confirmRemoveId === m.user_id && (
-                    <div className="mt-1 mx-1 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <div className="mt-1 mx-1 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
                       <p className="flex-1 text-red-500 text-xs font-medium">Remove {m.display_name}?</p>
                       <button onClick={() => setConfirmRemoveId(null)} className="text-slate-400 text-xs px-2 py-1 rounded-lg border border-slate-200">Cancel</button>
                       <button onClick={() => handleRemoveMember(m.user_id)} className="text-white text-xs px-2.5 py-1 rounded-lg bg-red-500 font-semibold">Remove</button>
@@ -1494,8 +1494,8 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
               ))}
               {/* Pending invites sent from this space */}
               {sentInvites.map(inv => (
-                <div key={inv.id} className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 text-sm font-bold flex-shrink-0">?</div>
+                <div key={inv.id} className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 text-sm font-bold flex-shrink-0">?</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 text-sm font-medium truncate">{inv.invited_email || `LISTA-${inv.user_code}`}</p>
                     <p className="text-amber-500 text-[10px]">Invite pending</p>
@@ -1517,7 +1517,7 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
                 <button
                   key={mode}
                   onClick={() => { setAddMode(mode); setMemberInput(''); setMemberError('') }}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${addMode === mode ? 'bg-white text-accent-deep shadow-sm' : 'text-slate-400'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${addMode === mode ? 'bg-card-bg text-accent-deep shadow-sm' : 'text-slate-400'}`}
                 >
                   {label}
                 </button>
@@ -1535,7 +1535,7 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
                 onChange={e => { setMemberInput(e.target.value); setMemberError('') }}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddMember() } }}
                 placeholder={addMode === 'email' ? 'teammate@gmail.com' : 'LISTA-XXXXXXXX'}
-                className="flex-1 bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-2.5 outline-none border border-black/10 focus:border-accent-deep transition-colors"
+                className="flex-1 bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-2.5 outline-none border border-divider focus:border-accent-deep transition-colors"
               />
               <button onClick={handleAddMember} disabled={addingMember || !memberInput.trim()}
                 className="px-4 py-2.5 rounded-xl bg-accent-deep text-white text-sm font-semibold disabled:opacity-40 transition-colors">
@@ -1546,10 +1546,10 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
             {memberSuccess && <p className="text-green-600 text-xs mt-1.5">{memberSuccess}</p>}
           </div>
 
-          <div className="border-t border-slate-100 pt-4">
+          <div className="border-t border-divider pt-4">
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-3">Danger Zone</p>
             {confirmDelete ? (
-              <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
                 <p className="text-red-600 text-sm font-semibold mb-1">Delete "{space.name}"?</p>
                 <p className="text-red-400 text-xs mb-3">All tasks in this space will be permanently deleted.</p>
                 <div className="flex gap-2">
@@ -1559,14 +1559,14 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
               </div>
             ) : (
               <button onClick={() => setConfirmDelete(true)}
-                className="w-full py-2.5 rounded-xl border border-red-100 text-red-400 text-sm font-medium">
+                className="w-full py-2.5 rounded-xl border border-red-500/20 text-red-400 text-sm font-medium">
                 Delete Space
               </button>
             )}
           </div>
         </div>
-        <div className="px-6 pb-8 pt-3 border-t border-black/8 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium">Cancel</button>
+        <div className="px-6 pb-8 pt-3 border-t border-divider flex gap-3 flex-shrink-0">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-divider text-slate-500 text-sm font-medium">Cancel</button>
           <button
             onClick={() => name.trim() && onSave({ name: name.trim(), description, color })}
             disabled={!name.trim()}
@@ -1742,7 +1742,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
               autoFocus type="text" value={name} onChange={e => setName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onConfirm({ name: name.trim(), description, color, members }) }}
               placeholder="e.g. Sprint 3, Study Group, Thesis Team"
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300 transition-colors"
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-divider focus:border-accent-deep placeholder:text-slate-300 transition-colors"
             />
           </div>
 
@@ -1752,7 +1752,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
             </p>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
               placeholder="What is this space for?" rows={2}
-              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300 resize-none transition-colors" />
+              className="w-full bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-divider focus:border-accent-deep placeholder:text-slate-300 resize-none transition-colors" />
           </div>
 
           <div className="mb-4">
@@ -1778,7 +1778,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
                 onChange={e => { setMemberEmail(e.target.value); setEmailError('') }}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddMember() } }}
                 placeholder="Enter email address"
-                className="flex-1 bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-black/10 focus:border-accent-deep placeholder:text-slate-300 transition-colors" />
+                className="flex-1 bg-slate-50 text-slate-800 text-sm rounded-xl px-4 py-3 outline-none border border-divider focus:border-accent-deep placeholder:text-slate-300 transition-colors" />
               <button type="button" onClick={handleAddMember}
                 className="px-4 py-3 rounded-xl bg-accent-deep text-white text-sm font-semibold hover:bg-accent-mid transition-colors">
                 Add
@@ -1802,8 +1802,8 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
           </div>
         </div>
 
-        <div className="px-6 pb-8 pt-3 border-t border-black/8 flex gap-3 flex-shrink-0">
-          <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium">Cancel</button>
+        <div className="px-6 pb-8 pt-3 border-t border-divider flex gap-3 flex-shrink-0">
+          <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-divider text-slate-500 text-sm font-medium">Cancel</button>
           <button
             onClick={() => name.trim() && onConfirm({ name: name.trim(), description, color, members })}
             disabled={!name.trim()}
@@ -1873,7 +1873,7 @@ function MemberProfileModal({ member, tasks, modifications = {}, spaceColor, onC
         </div>
 
         {/* Header */}
-        <div className="px-5 pt-4 pb-4 flex-shrink-0 border-b border-black/6">
+        <div className="px-5 pt-4 pb-4 flex-shrink-0 border-b border-divider">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold"
@@ -1923,7 +1923,7 @@ function MemberProfileModal({ member, tasks, modifications = {}, spaceColor, onC
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  activeTab === tab.id ? 'bg-accent-deep text-white' : 'text-slate-400 border border-black/10'
+                  activeTab === tab.id ? 'bg-accent-deep text-white' : 'text-slate-400 border border-divider'
                 }`}>
                 {tab.label}
                 {count > 0 && (
@@ -1951,7 +1951,7 @@ function MemberProfileModal({ member, tasks, modifications = {}, spaceColor, onC
 
           <button
             onClick={() => { onClose(); onNavigate?.('profile') }}
-            className="w-full mt-5 py-3 rounded-2xl border-2 border-black/8 text-slate-600 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+            className="w-full mt-5 py-3 rounded-2xl border-2 border-divider text-slate-600 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
           >
             See Full Profile
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -2000,7 +2000,7 @@ function ProfileTaskCard({ task, spaceColor, modInfo, onOpen }) {
           </p>
           <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
             {modInfo && (
-              <span className="flex items-center gap-1 text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[9px] font-bold text-purple-500 bg-purple-500/10 px-1.5 py-0.5 rounded-full">
                 <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -2277,7 +2277,7 @@ function KanbanCard({ task, members, themeColor, columnId, modification, onClick
           ? 'opacity-40 scale-95 rotate-1 cursor-grabbing shadow-xl'
           : 'cursor-grab active:cursor-grabbing active:scale-[0.98] hover:shadow-lg'
       }`}
-      style={{ backgroundColor: themeColor ? themeColor + '28' : '#ffffff' }}
+      style={{ backgroundColor: themeColor ? themeColor + '28' : 'var(--color-card-bg)' }}
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-2">
@@ -2310,7 +2310,7 @@ function KanbanCard({ task, members, themeColor, columnId, modification, onClick
       </p>
       {modification && (
         <div className="mb-2">
-          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-purple-500 bg-purple-500/10 px-1.5 py-0.5 rounded-full">
             <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -2332,14 +2332,14 @@ function KanbanCard({ task, members, themeColor, columnId, modification, onClick
         <div className="flex items-center">
           {assignee && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(assignee) }}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-card-bg"
               style={{ backgroundColor: memberColor(assignee) }}>
               {assignee[0].toUpperCase()}
             </button>
           )}
           {creatorName && creatorName !== assignee && (
             <button onClick={e => { e.stopPropagation(); onMemberClick?.(creatorName) }}
-              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold ring-2 ring-white -ml-1.5"
+              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold ring-2 ring-card-bg -ml-1.5"
               style={{ backgroundColor: memberColor(creatorName) }}>
               {creatorName[0].toUpperCase()}
             </button>
@@ -2394,7 +2394,7 @@ function MemberView({ tasks, members, inProgressIds, modifications, spaceColor, 
         {SORT_OPTIONS.map(opt => (
           <button key={opt.id} onClick={() => setMemberSort(opt.id)}
             className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
-              memberSort === opt.id ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'
+              memberSort === opt.id ? 'bg-accent-deep text-white' : 'border border-divider text-slate-400'
             }`}>
             {opt.label}
           </button>
@@ -2406,7 +2406,7 @@ function MemberView({ tasks, members, inProgressIds, modifications, spaceColor, 
         const completionRate = memberTasks.length > 0 ? Math.round((completed / memberTasks.length) * 100) : 0
         return (
           <div key={member.user_id} className="rounded-2xl overflow-hidden card-elevated"
-            style={{ backgroundColor: themeColor ? themeColor + '18' : '#ffffff' }}>
+            style={{ backgroundColor: themeColor ? themeColor + '18' : 'var(--color-card-bg)' }}>
 
             {/* Section header — tap to collapse */}
             <button
@@ -2490,7 +2490,7 @@ function MemberTaskCard({ task, members, inProgressIds, modification, themeColor
   return (
     <button onClick={onClick}
       className="w-full rounded-xl flex items-stretch overflow-hidden text-left transition-all active:scale-[0.99] card-elevated"
-      style={{ backgroundColor: themeColor ? themeColor + '28' : '#f8fafc' }}
+      style={{ backgroundColor: themeColor ? themeColor + '28' : 'var(--color-card-bg)' }}
     >
       <div className="w-1 flex-shrink-0" style={{ backgroundColor: modification ? '#8B5CF6' : colors.border }} />
       <div className="flex-1 px-3 py-2.5 min-w-0">
@@ -2514,7 +2514,7 @@ function MemberTaskCard({ task, members, inProgressIds, modification, themeColor
             </span>
           )}
           {modification && (
-            <span className="text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">Modified</span>
+            <span className="text-[9px] font-bold text-purple-500 bg-purple-500/10 px-1.5 py-0.5 rounded-full">Modified</span>
           )}
         </div>
         <div className="flex items-center justify-between mt-1.5">
@@ -2536,14 +2536,14 @@ function MemberTaskCard({ task, members, inProgressIds, modification, themeColor
 
 // ── Table View ────────────────────────────────────────────────────────────────
 function TableView({ tasks, members, themeColor, inProgressIds, modifications, onToggle, onClick, onMemberClick, onStatusChange }) {
-  const headerBg = themeColor ? themeColor + '30' : '#f8fafc'
+  const headerBg = themeColor ? themeColor + '30' : 'var(--color-app-bg)'
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse" style={{ minWidth: '700px' }}>
         <thead>
           <tr style={{ backgroundColor: headerBg }}>
             {['', 'Task', 'Status', 'Assignee', 'Reporter', 'Created', 'Updated', 'Due'].map((h, i) => (
-              <th key={i} className={`py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-black/8 ${i === 0 ? 'w-10 px-4' : 'px-3'}`}>
+              <th key={i} className={`py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wide border-b border-divider ${i === 0 ? 'w-10 px-4' : 'px-3'}`}>
                 {h}
               </th>
             ))}
@@ -2588,7 +2588,7 @@ function TableRow({ task, members, themeColor, columnId, modification, onToggle,
 
   return (
     <tr
-      className="group border-b border-black/[0.04] cursor-pointer transition-colors hover:brightness-95"
+      className="group border-b border-divider cursor-pointer transition-colors hover:brightness-95"
       style={rowBg ? { backgroundColor: rowBg } : {}}
       onClick={onClick}
     >
@@ -2616,7 +2616,7 @@ function TableRow({ task, members, themeColor, columnId, modification, onToggle,
             {task.category}
           </span>
           {modification && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-purple-500 bg-purple-500/10 px-1.5 py-0.5 rounded-full">
               <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -2644,7 +2644,7 @@ function TableRow({ task, members, themeColor, columnId, modification, onToggle,
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           {showStatus && (
-            <div className="absolute top-full left-0 mt-1 z-20 bg-white rounded-xl shadow-xl border border-black/8 overflow-hidden min-w-[120px]">
+            <div className="absolute top-full left-0 mt-1 z-20 bg-card-bg rounded-xl shadow-xl border border-divider overflow-hidden min-w-[120px]">
               {KANBAN_COLS.filter(c => c.id !== columnId).map(c => (
                 <button key={c.id}
                   onClick={() => { onStatusChange(c.id); setShowStatus(false) }}
@@ -2736,7 +2736,7 @@ function SpaceDetailsModal({ tasks, members, spaceColor, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full bg-white rounded-t-3xl max-h-[80vh] flex flex-col shadow-2xl">
+      <div className="w-full bg-card-bg rounded-t-3xl max-h-[80vh] flex flex-col shadow-2xl">
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
