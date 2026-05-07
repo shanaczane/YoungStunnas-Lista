@@ -102,14 +102,7 @@ export default function HomeScreen({
             checklistItems: checklist.items,
           })
         } else {
-          setParseCard({
-            raw: text,
-            task: text,
-            due_date: null,
-            category: 'Personal',
-            assignee: null,
-            notes: text,
-          })
+          setParseCard({ raw: text, task: text, due_date: null, category: 'Personal', assignee: null, notes: cleanInput(text) })
         }
       })
       .catch(() => {
@@ -370,6 +363,22 @@ export default function HomeScreen({
           </>
         )}
       </div>
+
+      {/* Image scanning overlay */}
+      {scanningImage && (
+        <div className="fixed inset-0 z-30 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm gap-4">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin" />
+          <p className="text-white font-semibold text-base">Reading your list…</p>
+        </div>
+      )}
+
+      {/* Scan error toast */}
+      {scanError && !scanningImage && (
+        <div className="fixed top-20 left-4 right-4 z-30 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+          <p className="text-red-500 text-sm font-medium flex-1">{scanError}</p>
+          <button onClick={() => setScanError('')} className="text-red-300 hover:text-red-500 ml-3 text-lg leading-none">✕</button>
+        </div>
+      )}
 
       {/* Bottom fixed area: parse card + chat input stacked */}
       <div className="fixed bottom-20 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">

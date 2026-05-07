@@ -4,6 +4,8 @@
 create table if not exists spaces (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  description text,
+  color text,
   owner_id uuid references auth.users(id) on delete cascade not null,
   created_at timestamptz default now()
 );

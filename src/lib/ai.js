@@ -118,8 +118,10 @@ export function cleanInput(input) {
 }
 
 // ─── Ollama / parse ───────────────────────────────────────────────────────────
+// In production (Vercel), calls go through /api/* serverless proxy to avoid CORS/HTTPS issues.
 const OLLAMA_URL = import.meta.env.VITE_OLLAMA_URL || 'http://localhost:11434'
 const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'llama3.2'
+const IS_PROD = import.meta.env.PROD
 
 const DAY_ABBREVS = {
   'mon': 'monday', 'tue': 'tuesday', 'tues': 'tuesday',
@@ -145,13 +147,16 @@ Return ONLY one line in this exact format: Title: item1, item2, item3, item4
 Example: Things to buy: 2 pencil, 3 eraser, 4 notebooks, 2 ballpens
 No explanation. No bullet points. No extra lines. Just the single comma-separated line.`
 
+  const payload = { prompt, images: [base64Image], stream: false }
   try {
-    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+    const url = IS_PROD ? '/api/parse-image' : `${OLLAMA_URL}/api/generate`
+    const body = IS_PROD ? JSON.stringify(payload) : JSON.stringify({ model, ...payload })
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt, images: [base64Image], stream: false }),
+      body,
     })
-    if (!res.ok) throw new Error(`Ollama error ${res.status}`)
+    if (!res.ok) throw new Error(`error ${res.status}`)
     const data = await res.json()
     const raw = data.response?.trim() || null
     if (!raw) return null
@@ -205,23 +210,20 @@ Rules:
 Input: "${input.replace(/"/g, "'")}"`
 
   try {
-    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+    const url = IS_PROD ? '/api/parse-task' : `${OLLAMA_URL}/api/generate`
+    const bodyObj = IS_PROD
+      ? { prompt, stream: false, format: 'json' }
+      : { model: OLLAMA_MODEL, prompt, stream: false, format: 'json' }
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        stream: false,
-        format: 'json',
-      }),
+      body: JSON.stringify(bodyObj),
     })
 
-    if (!res.ok) throw new Error(`Ollama error ${res.status}`)
+    if (!res.ok) throw new Error(`error ${res.status}`)
 
     const data = await res.json()
     const parsed = JSON.parse(data.response)
-    // Always override Ollama's date with our reliable regex extractor —
-    // LLMs are poor at calendar math and consistently return wrong dates
     const fallback = fallbackParse(input)
     parsed.due_date = fallback.due_date
     return parsed
