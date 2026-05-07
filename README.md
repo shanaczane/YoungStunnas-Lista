@@ -50,6 +50,7 @@ Tasks are intelligently organized into categories such as:
 - Personal
 - Errands
 - Health
+- and more
 
 ### Smart Reminders
 Automatic reminders are scheduled based on detected due dates.
