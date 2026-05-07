@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { BUILT_IN_CATEGORIES, getCategoryColor, createCategory } from '../lib/categories'
 import { CategoryIcon } from '../lib/icons'
 import { isChecklist, getChecklistItems, getChecklistTitle, encodeChecklist } from '../lib/ai'
@@ -24,7 +24,18 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
   const [saving, setSaving] = useState(false)
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
+  const [visible, setVisible] = useState(false)
   const itemRefs = useRef([])
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  function handleClose() {
+    setVisible(false)
+    setTimeout(onClose, 280)
+  }
 
   const isDirty =
     taskName !== task.task_name ||
@@ -47,26 +58,27 @@ export default function TaskDetailModal({ task, onClose, onUpdate, onDelete, cat
       reminder_minutes: reminderEnabled ? reminderMinutes : null,
     })
     setSaving(false)
-    onClose()
+    handleClose()
   }
 
   function handleDelete() {
     if (!showDeleteConfirm) { setShowDeleteConfirm(true); return }
-    onDelete(task.id)
+    setVisible(false)
+    setTimeout(() => onDelete(task.id), 280)
   }
 
   function handleBackdrop(e) {
-    if (e.target === e.currentTarget) onClose()
+    if (e.target === e.currentTarget) handleClose()
   }
 
   const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/30 backdrop-blur-sm"
+      className={`fixed inset-0 z-50 flex items-end backdrop-blur-sm transition-colors duration-300 ${visible ? 'bg-black/30' : 'bg-black/0'}`}
       onClick={handleBackdrop}
     >
-      <div className="w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-divider">
+      <div className={`w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl border-t border-divider transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>

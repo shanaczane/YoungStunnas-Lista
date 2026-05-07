@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import ProfileAvatar from '../components/ProfileAvatar'
 import ScreenHeader from '../components/ScreenHeader'
@@ -468,6 +468,17 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error,  setError]  = useState('')
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  function handleClose(cb) {
+    setVisible(false)
+    setTimeout(cb, 280)
+  }
 
   async function handleSave() {
     const trimmed = name.trim()
@@ -490,8 +501,8 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
     setSaving(false)
     const err = result?.error
     if (err) { setError('Could not save — try again.'); return }
-    if (isEditing) onCancel()
-    else onCreated()
+    if (isEditing) handleClose(onCancel)
+    else handleClose(onCreated)
   }
 
   async function handleDelete() {
@@ -506,19 +517,19 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
       return
     }
 
-    onCancel()
+    handleClose(onCancel)
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm"
+      className={`fixed inset-0 z-50 flex items-end backdrop-blur-sm transition-colors duration-300 ${visible ? 'bg-black/60' : 'bg-black/0'}`}
       onClick={e => {
         if (e.target !== e.currentTarget || saving || deleting) return
         if (showDeleteConfirm) setShowDeleteConfirm(false)
-        else onCancel()
+        else handleClose(onCancel)
       }}
     >
-      <div className="w-full bg-card-bg rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
+      <div className={`w-full bg-card-bg rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
         <h2 className="text-slate-900 font-bold text-lg mb-5">
           {isEditing ? 'Edit Category' : 'New Category'}
         </h2>
@@ -647,13 +658,24 @@ function NewCategoryModal({ session, category, categories = [], onCreated, onSav
 
 function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm }) {
   const taskCount = category.taskCount || 0
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  function handleClose() {
+    setVisible(false)
+    setTimeout(onCancel, 280)
+  }
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-end bg-black/50 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget && !deleting) onCancel() }}
+      className={`fixed inset-0 z-60 flex items-end backdrop-blur-sm transition-colors duration-300 ${visible ? 'bg-black/50' : 'bg-black/0'}`}
+      onClick={e => { if (e.target === e.currentTarget && !deleting) handleClose() }}
     >
-      <div className="w-full bg-card-bg rounded-t-3xl p-6 shadow-2xl">
+      <div className={`w-full bg-card-bg rounded-t-3xl p-6 shadow-2xl transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 6h18"/>
@@ -673,7 +695,7 @@ function DeleteCategoryConfirmSheet({ category, deleting, onCancel, onConfirm })
 
         <div className="flex gap-3">
           <button
-            onClick={onCancel}
+            onClick={handleClose}
             disabled={deleting}
             className="flex-1 py-3 rounded-xl border border-black/10 text-slate-500 text-sm font-medium disabled:opacity-50"
           >
