@@ -235,6 +235,7 @@ export default function App() {
             pendingImage={pendingImage}
             onPendingImageConsumed={() => setPendingImage(null)}
             onBulkDelete={handleBulkDelete}
+            onImageCapture={handleImageCapture}
           />
         )}
         {screen === 'tasks' && (
@@ -279,7 +280,6 @@ export default function App() {
         active={screen}
         onNavigate={tab => navigateTo(tab)}
         onAddTask={() => navigateTo('home', { focusChat: true })}
-        onImageCapture={handleImageCapture}
         alertCount={alertUnreadCount}
       />
 

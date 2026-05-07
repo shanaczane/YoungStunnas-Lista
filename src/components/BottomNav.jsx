@@ -1,7 +1,5 @@
-import { useRef } from 'react'
 
-export default function BottomNav({ active, onNavigate, onAddTask, onImageCapture, alertCount = 0 }) {
-  const fileRef = useRef(null)
+export default function BottomNav({ active, onNavigate, onAddTask, alertCount = 0 }) {
   const leftTabs = [
     { id: 'home',  label: 'Home',  icon: <HomeIcon /> },
     { id: 'tasks', label: 'Tasks', icon: <TasksIcon /> },
@@ -20,27 +18,16 @@ export default function BottomNav({ active, onNavigate, onAddTask, onImageCaptur
         <TabButton key={tab.id} tab={tab} active={active} onNavigate={onNavigate} />
       ))}
 
-      {/* Center FAB — camera */}
+      {/* Center FAB — add task */}
       <div className="flex-1 flex justify-center pb-2">
         <button
-          onClick={() => fileRef.current?.click()}
+          onClick={onAddTask}
           className="fab w-14 h-14 bg-accent-deep rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
           style={{ boxShadow: '0 4px 16px rgba(10,46,92,0.45)' }}
-          aria-label="Scan list"
+          aria-label="Add task"
         >
-          <CameraIcon />
+          <PlusIcon />
         </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={e => {
-            const file = e.target.files?.[0]
-            if (file) onImageCapture?.(file)
-            e.target.value = ''
-          }}
-        />
       </div>
 
       {rightTabs.map(tab => (
@@ -103,11 +90,11 @@ function SpacesIcon() {
   )
 }
 
-function CameraIcon() {
+function PlusIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-      <circle cx="12" cy="13" r="4"/>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/>
+      <line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
   )
 }

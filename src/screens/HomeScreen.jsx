@@ -27,6 +27,7 @@ export default function HomeScreen({
   onFocusChatConsumed,
   pendingImage,
   onPendingImageConsumed,
+  onImageCapture,
 }) {
   const [input, setInput] = useState('')
   const [parsing, setParsing] = useState(false)
@@ -42,6 +43,7 @@ export default function HomeScreen({
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const inputRef = useRef(null)
+  const cameraRef = useRef(null)
   const itemRefs = useRef([])
 
   const today = new Date()
@@ -645,7 +647,21 @@ export default function HomeScreen({
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-card-bg rounded-2xl px-4 py-3 card-elevated">
+        <div className="flex items-center gap-2 bg-card-bg rounded-2xl px-3 py-3 card-elevated">
+          <button
+            onClick={() => cameraRef.current?.click()}
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-accent-deep transition-colors shrink-0"
+            aria-label="Scan image"
+          >
+            <CameraIcon />
+          </button>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onImageCapture?.(f); e.target.value = '' }}
+          />
           <input
             ref={inputRef}
             type="text"
@@ -711,6 +727,15 @@ function EmptyHome() {
   )
 }
 
+
+function CameraIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  )
+}
 
 function SendIcon() {
   return (
