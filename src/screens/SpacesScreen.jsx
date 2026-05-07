@@ -1306,6 +1306,8 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
         setMemberInput('')
         setMemberSuccess(`Invite sent to ${val}! They'll see it when they open Lista.`)
         setTimeout(() => setMemberSuccess(''), 3000)
+        supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
+          .then(({ data }) => { if (data) setSentInvites(data) })
       } else {
         setMemberError('Could not send invite.')
       }
@@ -1325,6 +1327,8 @@ function SpaceSettingsModal({ space, session, displayName, onSave, onDelete, onC
         setMemberInput('')
         setMemberSuccess('Invite sent! They\'ll see it when they open Lista.')
         setTimeout(() => setMemberSuccess(''), 3000)
+        supabase.from('space_invites').select('id, invited_email, user_code, invited_by_name').eq('space_id', space.id).eq('status', 'pending')
+          .then(({ data }) => { if (data) setSentInvites(data) })
       } else {
         setMemberError('Could not send invite. Make sure the space_invites table exists in Supabase.')
       }
