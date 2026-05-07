@@ -66,7 +66,7 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
         </div>
       </ScreenHeader>
 
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="flex-1 overflow-y-auto pb-24">
         {upcoming.length === 0 ? (
           <EmptyAlerts />
         ) : (
