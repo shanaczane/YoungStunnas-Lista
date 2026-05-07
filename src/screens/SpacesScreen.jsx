@@ -148,7 +148,7 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
                   )}
                   <button
                     onClick={() => setActiveSpace(space)}
-                    className={`w-full bg-white rounded-2xl p-4 card-elevated flex items-center gap-3 text-left transition-all active:scale-[0.99] ${isPinned ? 'ring-1 ring-accent-deep/20' : ''}`}
+                    className={`w-full bg-card-bg rounded-2xl p-4 card-elevated flex items-center gap-3 text-left transition-all active:scale-[0.99] ${isPinned ? 'ring-1 ring-accent-deep/20' : ''}`}
                   >
                     <div
                       className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold flex-shrink-0"
@@ -467,7 +467,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
 
       {/* Expanded filters — floats over task list */}
       {showFilterBar && (
-        <div className="absolute top-full left-0 right-0 z-10 mx-4 rounded-2xl bg-white border border-black/8 shadow-xl px-4 py-3 space-y-2.5">
+        <div className="absolute top-full left-0 right-0 z-10 mx-4 rounded-2xl bg-card-bg border border-black/8 shadow-xl px-4 py-3 space-y-2.5">
           <div className="flex items-center gap-2">
             <span className="text-slate-400 text-[11px] w-16 flex-shrink-0 font-medium">Status</span>
             <div className="flex gap-1.5">
@@ -573,7 +573,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
       {/* Bottom input */}
       <div className="fixed bottom-16 left-0 right-0 z-10 px-4 pb-3 pt-2 bg-app-bg/96 backdrop-blur-md flex flex-col gap-2.5">
         {parseCard && (
-          <div className="bg-white rounded-2xl p-4 card-elevated-lg">
+          <div className="bg-card-bg rounded-2xl p-4 card-elevated-lg">
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">AI Parsed · Space Task</p>
             <p className="text-slate-800 text-sm font-semibold">{parseCard.task}</p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -592,7 +592,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 bg-white border border-black/10 rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 bg-card-bg border border-black/10 rounded-2xl px-4 py-3 shadow-sm">
           <input
             ref={inputRef} type="text" value={input}
             onChange={e => setInput(e.target.value)}
@@ -666,7 +666,7 @@ function SpaceTaskCard({ task, members, spaceColor, onToggle, onClick, onMemberC
 
   return (
     <div
-      className="bg-white rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99] cursor-pointer"
+      className="bg-card-bg rounded-2xl flex items-center card-elevated transition-all overflow-hidden active:scale-[0.99] cursor-pointer"
       onClick={onClick}
     >
       <div className="w-1 self-stretch flex-shrink-0" style={{ backgroundColor: colors.border }} />
@@ -737,7 +737,7 @@ function SpaceTaskModal({ task, members, onSave, onDelete, onClose, onMemberClic
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full bg-white rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="w-full bg-card-bg rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl">
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
@@ -900,7 +900,7 @@ function SpaceSettingsModal({ space, session, onSave, onDelete, onClose, onMembe
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full bg-white rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl">
+      <div className="w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl">
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
@@ -1031,7 +1031,7 @@ function ActivityDrawer({ tasks, members, spaceColor, onClose, onMemberClick }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full bg-white rounded-t-3xl max-h-[70vh] flex flex-col shadow-2xl">
+      <div className="w-full bg-card-bg rounded-t-3xl max-h-[70vh] flex flex-col shadow-2xl">
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
@@ -1120,7 +1120,7 @@ function CreateSpaceModal({ onConfirm, onCancel }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
-      <div className="w-full bg-white rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl">
+      <div className="w-full bg-card-bg rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl">
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
@@ -1274,7 +1274,7 @@ function MemberProfileModal({ member, tasks, modifications = {}, spaceColor, onC
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full bg-white rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="w-full bg-card-bg rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl">
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
@@ -1334,7 +1334,7 @@ function MemberProfileModal({ member, tasks, modifications = {}, spaceColor, onC
                 }`}>
                 {tab.label}
                 {count > 0 && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.id ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.id ? 'bg-card-bg/20' : 'bg-slate-100 text-slate-400'}`}>
                     {count}
                   </span>
                 )}
@@ -1397,7 +1397,7 @@ function ProfileTaskCard({ task, spaceColor, modInfo, onOpen }) {
   return (
     <button
       onClick={onOpen}
-      className="w-full bg-white rounded-2xl flex items-stretch card-elevated overflow-hidden text-left transition-all active:scale-[0.99]"
+      className="w-full bg-card-bg rounded-2xl flex items-stretch card-elevated overflow-hidden text-left transition-all active:scale-[0.99]"
     >
       <div className="w-1 flex-shrink-0" style={{ backgroundColor: modInfo ? '#8B5CF6' : colors.border }} />
       <div className="flex-1 px-3.5 py-3 min-w-0">

@@ -89,10 +89,10 @@
 }
 
 body {
-  background-color: #F4F6FB;
+  background-color: var(--color-app-bg);
   font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
   overscroll-behavior: none;
-  color: #0A2240;
+  color: var(--color-text-primary);
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }

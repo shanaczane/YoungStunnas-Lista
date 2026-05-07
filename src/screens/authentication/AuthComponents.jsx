@@ -3,17 +3,17 @@ import { supabase } from '../../lib/supabase'
 export function Field({ label, required, type = 'text', value, onChange, error, placeholder, suffix }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
+      <label className="block text-xs font-medium text-[#3A4F6E] mb-1">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
-      <div className={`flex items-center bg-slate-50 rounded-xl border transition-colors px-3
+      <div className={`flex items-center bg-[#F7F9FD] rounded-xl border transition-colors px-3
         ${error ? 'border-red-400' : 'border-black/10 focus-within:border-accent-deep'}`}>
         <input
           type={type}
           value={value}
           placeholder={placeholder}
           onChange={e => onChange(e.target.value)}
-          className="flex-1 bg-transparent text-slate-800 text-sm py-2.5 outline-none placeholder:text-slate-300 min-w-0"
+          className="flex-1 bg-transparent text-[#0A2240] text-sm py-2.5 outline-none placeholder:text-[#9BADC4] min-w-0"
         />
         {suffix && <span className="ml-2 flex-shrink-0">{suffix}</span>}
       </div>
@@ -39,7 +39,7 @@ export function Divider() {
   return (
     <div className="flex items-center gap-3 my-5">
       <div className="flex-1 h-px bg-black/8" />
-      <span className="text-slate-300 text-xs font-mono">or</span>
+      <span className="text-[#9BADC4] text-xs font-mono">or</span>
       <div className="flex-1 h-px bg-black/8" />
     </div>
   )
@@ -56,8 +56,8 @@ export function GoogleButton() {
   return (
     <button
       onClick={handleGoogle}
-      className="w-full border border-black/10 hover:border-slate-300 text-slate-700 py-3
-        rounded-xl text-sm font-medium flex items-center justify-center gap-2.5 transition-colors hover:bg-slate-50"
+      className="w-full border border-black/10 hover:border-[#9BADC4] text-[#1B3052] py-3
+        rounded-xl text-sm font-medium flex items-center justify-center gap-2.5 transition-colors hover:bg-[#F4F6FB]"
     >
       <GoogleIcon />
       Continue with Google

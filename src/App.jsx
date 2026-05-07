@@ -18,6 +18,28 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [focusChat, setFocusChat] = useState(false)
   const [pendingImage, setPendingImage] = useState(null)
+  const [theme, setTheme] = useState(() => localStorage.getItem('lista-theme') || 'system')
+
+  useEffect(() => {
+    const root = window.document.documentElement
+    const applyTheme = (t) => {
+      if (t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+    }
+
+    applyTheme(theme)
+    localStorage.setItem('lista-theme', theme)
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const handleChange = () => applyTheme('system')
+      mediaQuery.addEventListener('change', handleChange)
+      return () => mediaQuery.removeEventListener('change', handleChange)
+    }
+  }, [theme])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -172,6 +194,8 @@ export default function App() {
             session={session}
             displayName={displayName}
             tasks={tasks}
+            theme={theme}
+            onSelectTheme={setTheme}
             onBack={() => setScreen('home')}
           />
         )}
