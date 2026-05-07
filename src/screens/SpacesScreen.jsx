@@ -529,22 +529,11 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
         <div className="px-5 pb-2 flex items-center gap-2">
           <button
             onClick={() => setShowFilterBar(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeFilterCount > 0 ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${activeFilterCount > 0 ? 'bg-accent-deep text-white' : 'border border-black/10 text-slate-400'}`}
           >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
             </svg>
-            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-          </button>
-          <button
-            onClick={() => setGroupByMember(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${groupByMember ? 'bg-accent-pale text-accent-deep border border-accent-deep/20' : 'border border-black/10 text-slate-400'}`}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-            By Member
           </button>
           <div className="flex items-center gap-1 bg-slate-100/80 rounded-full p-1">
             {[
