@@ -40,6 +40,47 @@
   /* Fonts */
   --font-sans: 'SF Pro Display', -apple-system, system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', monospace;
+
+  --color-nav-bg: rgba(255, 255, 255, 0.85);
+  --color-border-subtle: rgba(10, 46, 92, 0.08);
+  --color-shadow-main: rgba(10, 46, 92, 0.07);
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+.dark {
+  --color-accent-deep:    #6BA3DD;
+  --color-accent-mid:     #3B7DD0;
+  --color-accent-light:   #1A56A0;
+  --color-accent-lighter: #0A2E5C;
+  --color-accent-pale:    rgba(10, 46, 92, 0.4);
+  --color-accent-shade:   #A5C5E8;
+
+  --color-text-primary:   #F4F6FB;
+  --color-text-secondary: #C5D3E0;
+  --color-text-tertiary:  #9BADC4;
+
+  --color-app-bg:      #060F1E;
+  --color-card-bg:     #0A2240;
+  --color-card-footer: #0A2E5C;
+  --color-echo-bubble: #1B3052;
+  --color-divider:     rgba(255, 255, 255, 0.1);
+
+  --color-slate-950: #F7F9FD;
+  --color-slate-900: #F4F6FB;
+  --color-slate-800: #F4F6FB;
+  --color-slate-700: #E8EEF4;
+  --color-slate-600: #C5D3E0;
+  --color-slate-500: #C5D3E0;
+  --color-slate-400: #9BADC4;
+  --color-slate-300: #7A8AA1;
+  --color-slate-200: #3A4F6E;
+  --color-slate-100: #1B3052;
+  --color-slate-50:  #0A2E5C;
+
+  --color-nav-bg: rgba(10, 34, 64, 0.9);
+  --color-border-subtle: rgba(255, 255, 255, 0.1);
+  --color-shadow-main: rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -71,8 +112,8 @@ body {
 .fab { animation: fab-pop 0.25s ease-out forwards; }
 
 .card-elevated {
-  box-shadow: 0 2px 8px rgba(10,46,92,0.07), 0 0 1px rgba(10,46,92,0.06);
+  box-shadow: 0 2px 8px var(--color-shadow-main), 0 0 1px var(--color-border-subtle);
 }
 .card-elevated-lg {
-  box-shadow: 0 4px 16px rgba(10,46,92,0.10), 0 0 1px rgba(10,46,92,0.06);
+  box-shadow: 0 4px 16px var(--color-shadow-main), 0 0 1px var(--color-border-subtle);
 }

@@ -10,12 +10,11 @@ const THEMES = [
 
 const CATEGORIES = ['School', 'Work', 'Personal', 'Errands', 'Health']
 
-export default function ProfileScreen({ session, displayName, tasks, onBack, onSignOut }) {
+export default function ProfileScreen({ session, displayName, tasks, onBack, onSignOut, theme, onSelectTheme }) {
   const [editing, setEditing]           = useState(false)
   const [nameInput, setNameInput]       = useState(displayName)
   const [saving, setSaving]             = useState(false)
   const [saveMsg, setSaveMsg]           = useState('')
-  const [theme, setTheme]               = useState(() => localStorage.getItem('lista-theme') || 'system')
   const [avatarUrl, setAvatarUrl]       = useState(session?.user?.user_metadata?.avatar_url || null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -108,10 +107,6 @@ export default function ProfileScreen({ session, displayName, tasks, onBack, onS
     e.target.value = ''
   }
 
-  function selectTheme(id) {
-    setTheme(id)
-    localStorage.setItem('lista-theme', id)
-  }
 
 async function handleSignOut() {
   const { error } = await supabase.auth.signOut()
@@ -128,7 +123,7 @@ async function handleSignOut() {
     return (
       <SettingsScreen
         theme={theme}
-        onSelectTheme={selectTheme}
+        onSelectTheme={onSelectTheme}
         onBack={() => setShowSettings(false)}
       />
     )
@@ -137,7 +132,7 @@ async function handleSignOut() {
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
       {/* Header */}
-      <ScreenHeader className="flex items-center gap-3 px-5 pt-6 pb-4 bg-white border-b border-black/6">
+      <ScreenHeader className="flex items-center gap-3 px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <button
           onClick={onBack}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors flex-shrink-0"
@@ -153,7 +148,7 @@ async function handleSignOut() {
       <div className="flex-1 overflow-y-auto pb-24">
 
         {/* Avatar + name card */}
-        <div className="mx-5 mt-5 bg-white rounded-2xl card-elevated p-5">
+        <div className="mx-5 mt-5 bg-card-bg rounded-2xl card-elevated p-5">
           <div className="flex items-center gap-4">
             {/* Avatar circle — tap to change photo */}
             <div className="relative flex-shrink-0">
@@ -249,7 +244,7 @@ async function handleSignOut() {
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Task Overview</p>
 
           {/* Progress bar */}
-          <div className="bg-white rounded-2xl card-elevated p-4 mb-3">
+          <div className="bg-card-bg rounded-2xl card-elevated p-4 mb-3">
             <div className="flex items-end justify-between mb-2">
               <p className="text-slate-800 text-sm font-semibold">Completion rate</p>
               <p className="text-accent-deep text-lg font-bold leading-none">{pct}%</p>
@@ -269,7 +264,7 @@ async function handleSignOut() {
 
           {/* By category */}
           {byCategory.length > 0 && (
-            <div className="bg-white rounded-2xl card-elevated p-4">
+            <div className="bg-card-bg rounded-2xl card-elevated p-4">
               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-3">By Category</p>
               <div className="space-y-2.5">
                 {byCategory.map(({ cat, count }) => (
@@ -293,7 +288,7 @@ async function handleSignOut() {
         <div className="mx-5 mt-4">
           <button
             onClick={() => setShowSettings(true)}
-            className="w-full bg-white rounded-2xl card-elevated px-4 py-3.5 text-left text-slate-700 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition-colors"
+            className="w-full bg-card-bg rounded-2xl card-elevated px-4 py-3.5 text-left text-slate-700 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition-colors"
           >
             <span className="flex items-center gap-3">
               <span className="text-slate-400">
@@ -312,7 +307,7 @@ async function handleSignOut() {
           <button
             onClick={handleSignOut}
             
-            className="w-full bg-white rounded-2xl card-elevated px-4 py-3.5 text-left text-red-500 text-sm font-semibold flex items-center gap-3 hover:bg-red-50 transition-colors"
+            className="w-full bg-card-bg rounded-2xl card-elevated px-4 py-3.5 text-left text-red-500 text-sm font-semibold flex items-center gap-3 hover:bg-red-50 transition-colors"
           >
             <span className="text-red-400">
               <LogoutIcon />
@@ -329,7 +324,7 @@ async function handleSignOut() {
 function SettingsScreen({ theme, onSelectTheme, onBack }) {
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <ScreenHeader className="flex items-center gap-3 px-5 pt-6 pb-4 bg-white border-b border-black/6">
+      <ScreenHeader className="flex items-center gap-3 px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <button
           onClick={onBack}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors flex-shrink-0"
@@ -345,7 +340,7 @@ function SettingsScreen({ theme, onSelectTheme, onBack }) {
       <div className="flex-1 overflow-y-auto pb-24">
         <div className="mx-5 mt-5">
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Appearance</p>
-          <div className="bg-white rounded-2xl card-elevated overflow-hidden">
+          <div className="bg-card-bg rounded-2xl card-elevated overflow-hidden">
             {THEMES.map((t, i) => (
               <button
                 key={t.id}
@@ -372,7 +367,7 @@ function SettingsScreen({ theme, onSelectTheme, onBack }) {
 
         <div className="mx-5 mt-4">
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-3">Settings</p>
-          <div className="bg-white rounded-2xl card-elevated overflow-hidden">
+          <div className="bg-card-bg rounded-2xl card-elevated overflow-hidden">
             <SettingToggle
               label="Smart AI Parsing"
               description="Automatically detect dates and categories"
@@ -390,7 +385,7 @@ function SettingsScreen({ theme, onSelectTheme, onBack }) {
         </div>
 
         <div className="mx-5 mt-4">
-          <div className="bg-white rounded-2xl card-elevated overflow-hidden">
+          <div className="bg-card-bg rounded-2xl card-elevated overflow-hidden">
             <SettingToggle
               label="Show Completed Tasks"
               description="Keep finished tasks in your main list"

@@ -15,7 +15,7 @@ export default function AlertsScreen({ tasks, session, displayName, onOpenTask, 
 
   return (
     <div className="flex flex-col min-h-screen bg-app-bg">
-      <ScreenHeader>
+      <ScreenHeader className="flex items-center justify-between px-5 pt-6 pb-4 bg-card-bg border-b border-divider">
         <div>
           <h1 className="text-slate-900 font-bold text-2xl">Reminders</h1>
           <p className="text-slate-400 text-xs mt-0.5">{upcoming.length} upcoming</p>
@@ -65,7 +65,7 @@ function ReminderRow({ task, onOpenTask }) {
   return (
     <button
       onClick={() => onOpenTask(task.id)}
-      className="w-full bg-white rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] overflow-hidden text-left"
+      className="w-full bg-card-bg rounded-2xl flex items-center card-elevated transition-all active:scale-[0.99] overflow-hidden text-left"
     >
       <div className="w-1 self-stretch shrink-0" style={{ backgroundColor: isOverdue ? '#ef4444' : colors.border }} />
       <div className="flex-1 py-3.5 px-3 min-w-0">
@@ -93,7 +93,7 @@ function ReminderRow({ task, onOpenTask }) {
 function EmptyReminders() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-      <img src={mascot} alt="Ollie" className="w-32 h-32 object-contain mb-2" style={{ mixBlendMode: 'multiply' }} />
+      <img src={mascot} alt="Ollie" className="w-32 h-32 object-contain mb-2" />
       <p className="text-slate-400 text-sm">No upcoming reminders</p>
       <p className="text-slate-300 text-xs mt-1">Tasks with due dates will appear here</p>
     </div>

@@ -12,7 +12,6 @@ export default function AppLogo({ size = 'md' }) {
       src={mainLogo}
       alt="Lista"
       className={`${sizes[size]} object-contain flex-shrink-0`}
-      style={{ mixBlendMode: 'multiply' }}
     />
   )
 }
