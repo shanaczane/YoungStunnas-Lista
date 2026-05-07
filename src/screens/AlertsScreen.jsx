@@ -118,7 +118,7 @@ function AlertRow({ task, dotColor, isRead, isLast, onOpen }) {
       onClick={() => onOpen(task.id)}
       className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors active:bg-app-bg ${
         !isLast ? 'border-b border-divider' : ''
-      } ${isRead ? 'bg-card-bg' : 'bg-white'}`}
+      } ${isRead ? 'bg-card-bg' : 'bg-accent-deep/5'}`}
     >
       <div className="w-2 shrink-0 flex justify-center">
         {!isRead && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dotColor }} />}
