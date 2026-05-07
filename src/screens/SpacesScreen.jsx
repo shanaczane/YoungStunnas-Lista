@@ -634,6 +634,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
             spaceColor={spaceColor}
             themeColor={spaceData.color}
             inProgressIds={inProgressIds}
+            modifications={modifications}
             onToggle={handleToggle}
             onClick={task => setEditingTask(task)}
             onMemberClick={openMemberProfile}
@@ -752,6 +753,7 @@ function SpaceBoard({ space, session, displayName, onBack, onNavigate, onSpaceDe
       {editingTask && (
         <SpaceTaskModal
           task={editingTask} members={members}
+          modification={modifications[editingTask.id] || null}
           onSave={updates => handleTaskUpdate(editingTask.id, updates)}
           onDelete={() => handleTaskDelete(editingTask.id)}
           onClose={() => setEditingTask(null)}
@@ -855,7 +857,7 @@ function SpaceTaskCard({ task, members, spaceColor, themeColor, onToggle, onClic
 }
 
 // ── Edit task modal ───────────────────────────────────────────────────────────
-function SpaceTaskModal({ task, members, onSave, onDelete, onClose, onMemberClick }) {
+function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose, onMemberClick }) {
   const creator = members.find(m => m.user_id === task.user_id)
   const creatorName = creator?.display_name || null
   const sanitizedAssignee = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined')
@@ -870,7 +872,15 @@ function SpaceTaskModal({ task, members, onSave, onDelete, onClose, onMemberClic
   const createdAt = task.created_at ? new Date(task.created_at) : null
   const history = []
   if (createdAt) history.push({ label: 'Created', date: createdAt, icon: '✦', color: '#94a3b8', person: creatorName })
-  if (task.is_complete) history.push({ label: 'Completed', date: new Date(task.updated_at || task.created_at), icon: '✓', color: '#34d399', person: task.assignee || creatorName })
+  if (modification) {
+    const detail = modification.changes.map(c => typeof c === 'object' ? `${c.field} → "${c.to}"` : c).join(' · ')
+    history.push({ label: 'Edited', date: new Date(modification.at), icon: '✎', color: '#8B5CF6', person: modification.by, detail })
+  }
+  if (task.is_complete) {
+    const sanAssignee = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined') ? task.assignee : null
+    history.push({ label: 'Completed', date: new Date(task.updated_at || task.created_at), icon: '✓', color: '#34d399', person: sanAssignee || creatorName })
+  }
+  history.sort((a, b) => a.date - b.date)
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -945,10 +955,13 @@ function SpaceTaskModal({ task, members, onSave, onDelete, onClose, onMemberClic
                         {ev.icon}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-slate-600 text-xs font-semibold">{ev.label}</p>
+                        <p className="text-xs font-semibold" style={{ color: ev.color }}>{ev.label}</p>
                         <p className="text-slate-400 text-[10px] mt-0.5">
                           {ev.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {ev.date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </p>
+                        {ev.detail && (
+                          <p className="text-[10px] font-medium mt-0.5" style={{ color: ev.color }}>{ev.detail}</p>
+                        )}
                       </div>
                       {ev.person ? (
                         <button onClick={() => onMemberClick?.(ev.person)}
@@ -1166,7 +1179,8 @@ function ActivityDrawer({ tasks, members, spaceColor, moveLog, onClose, onMember
       events.push({ type: 'created', taskName: task.task_name, date: new Date(task.created_at), label: 'Task created', person: creatorName })
     }
     if (task.is_complete) {
-      events.push({ type: 'completed', taskName: task.task_name, date: new Date(task.updated_at || task.created_at), label: 'Task completed', person: task.assignee || creatorName })
+      const sanAssignee = (task.assignee && task.assignee !== 'null' && task.assignee !== 'undefined') ? task.assignee : null
+      events.push({ type: 'completed', taskName: task.task_name, date: new Date(task.updated_at || task.created_at), label: 'Task completed', person: sanAssignee || creatorName })
     }
   })
   ;(moveLog || []).forEach(entry => {
@@ -1734,7 +1748,7 @@ const KANBAN_COLS = [
   { id: 'done',       label: 'Done',         color: '#10b981' },
 ]
 
-function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, onToggle, onClick, onMemberClick, onStatusChange, onDrop }) {
+function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, modifications, onToggle, onClick, onMemberClick, onStatusChange, onDrop }) {
   const [draggedTask, setDraggedTask] = useState(null)
   const [draggedFrom, setDraggedFrom] = useState(null)
   const [dragOverCol, setDragOverCol] = useState(null)
@@ -1800,6 +1814,7 @@ function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, onT
                 <KanbanCard
                   key={task.id} task={task} members={members}
                   themeColor={themeColor} columnId={col.id}
+                  modification={modifications?.[task.id] || null}
                   isDragging={draggedTask?.id === task.id}
                   onClick={() => !draggedTask && onClick(task)}
                   onMemberClick={onMemberClick}
@@ -1833,7 +1848,7 @@ function KanbanView({ tasks, members, spaceColor, themeColor, inProgressIds, onT
   )
 }
 
-function KanbanCard({ task, members, themeColor, columnId, onClick, onMemberClick, onStatusChange, isDragging, onDragStart, onDragEnd }) {
+function KanbanCard({ task, members, themeColor, columnId, modification, onClick, onMemberClick, onStatusChange, isDragging, onDragStart, onDragEnd }) {
   const [showStatus, setShowStatus] = useState(false)
   const colors = getCategoryColor(task.category)
   const creator = members.find(m => m.user_id === task.user_id)
@@ -1880,9 +1895,23 @@ function KanbanCard({ task, members, themeColor, columnId, onClick, onMemberClic
           ))}
         </div>
       )}
-      <p className={`text-sm font-semibold leading-tight mb-2.5 ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
+      <p className={`text-sm font-semibold leading-tight mb-1.5 ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
         {task.task_name}
       </p>
+      {modification && (
+        <div className="mb-2">
+          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Edited
+          </span>
+          <p className="text-purple-400 text-[9px] mt-0.5 truncate leading-tight">
+            {modification.changes.map(c => typeof c === 'object' ? `${c.field} → "${c.to}"` : c).join(' · ')}
+          </p>
+        </div>
+      )}
       <div className="flex items-end justify-between">
         <div>
           {task.due_date && <p className="text-[10px] text-slate-400">{formatDueDate(task.due_date)}</p>}
@@ -1987,10 +2016,26 @@ function TableRow({ task, members, themeColor, columnId, modification, onToggle,
         <p className={`text-sm font-medium leading-tight truncate ${task.is_complete ? 'line-through text-slate-300' : 'text-slate-800'}`}>
           {task.task_name}
         </p>
-        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 inline-block"
-          style={{ backgroundColor: colors.bg, color: colors.text }}>
-          {task.category}
-        </span>
+        <div className="flex items-center gap-1 flex-wrap mt-0.5">
+          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full inline-block"
+            style={{ backgroundColor: colors.bg, color: colors.text }}>
+            {task.category}
+          </span>
+          {modification && (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded-full">
+              <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Modified
+            </span>
+          )}
+        </div>
+        {modification && (
+          <p className="text-purple-400 text-[9px] mt-0.5 truncate">
+            {modification.changes.map(c => typeof c === 'object' ? `${c.field} → "${c.to}"` : c).join(' · ')}
+          </p>
+        )}
       </td>
 
       {/* Status */}

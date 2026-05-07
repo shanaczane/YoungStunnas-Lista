@@ -18,7 +18,10 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [focusChat, setFocusChat] = useState(false)
   const [pendingImage, setPendingImage] = useState(null)
-  const [theme, setTheme] = useState(() => localStorage.getItem('lista-theme') || 'system')
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('lista-theme')
+    return saved === 'dark' ? 'dark' : 'light'
+  })
 
   useEffect(() => {
     const root = window.document.documentElement
