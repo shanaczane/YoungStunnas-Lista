@@ -37,7 +37,10 @@ export default function TasksScreen({
   const [parseError, setParseError] = useState('')
   const inputRef = useRef(null)
 
-  const allCategories = [...BUILT_IN_CATEGORIES, ...categories]
+  const allCategories = [
+    ...BUILT_IN_CATEGORIES.filter(b => !categories.some(c => c.name === b.name)),
+    ...categories,
+  ]
   const openCount = tasks.filter(t => !t.is_complete).length
 
   const isCustomCategory = name => categories.some(cat => cat.name === name)

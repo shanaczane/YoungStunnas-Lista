@@ -15,12 +15,18 @@ function minutesToCustom(m) {
   return { value: String(m), unit: 'min' }
 }
 
+function toLocalInput(iso) {
+  const d = new Date(iso)
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 const PRESET_COLORS = ['#8B5CF6','#EC4899','#F59E0B','#10B981','#EF4444','#06B6D4','#6366F1']
 
 export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, onDelete, categories = [], onCategoriesChanged, session }) {
   const [taskName, setTaskName] = useState(task.task_name)
   const [category, setCategory] = useState(task.category || 'Personal')
-  const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
+  const [dueDate, setDueDate] = useState(task.due_date ? toLocalInput(task.due_date) : '')
   const [notes, setNotes] = useState(isChecklist(task) ? '' : (task.notes || ''))
   const [checklistItems, setChecklistItems] = useState(isChecklist(task) ? (getChecklistItems(task) || []) : null)
   const [checklistTitle, setChecklistTitle] = useState(getChecklistTitle(task) ?? task.task_name)
@@ -85,7 +91,7 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
   const isDirty =
     taskName !== task.task_name ||
     category !== task.category ||
-    dueDate !== (task.due_date ? task.due_date.slice(0, 16) : '') ||
+    dueDate !== (task.due_date ? toLocalInput(task.due_date) : '') ||
     (checklistItems
       ? (JSON.stringify(checklistItems) !== JSON.stringify(getChecklistItems(task) || []) || checklistTitle !== (getChecklistTitle(task) ?? task.task_name))
       : notes !== (task.notes || '')) ||
@@ -127,8 +133,9 @@ export default function TaskDetailModal({ task, tasks = [], onClose, onUpdate, o
   }
 
   const usedNames = new Set(tasks.map(t => t.category))
+  const customNames = new Set(categories.map(c => c.name))
   const allCategories = [
-    ...BUILT_IN_CATEGORIES.filter(b => usedNames.has(b.name) || b.name === category),
+    ...BUILT_IN_CATEGORIES.filter(b => !customNames.has(b.name) && (usedNames.has(b.name) || b.name === category)),
     ...categories,
   ]
 

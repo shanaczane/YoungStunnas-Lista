@@ -8,6 +8,12 @@ import { getCategoryColor, BUILT_IN_CATEGORIES } from '../lib/categories'
 import { CategoryIcon } from '../lib/icons'
 import mascot from '../mascots/home-mascot.png'
 
+function toLocalInput(iso) {
+  const d = new Date(iso)
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 // Space theme colors — pastel only, applied to UI backgrounds/accents (NOT member identity)
 const SPACE_COLORS = ['#A5B4FC','#C4B5FD','#F9A8D4','#FCD34D','#6EE7B7','#FCA5A5','#67E8F9','#7DD3FC']
 
@@ -1026,7 +1032,7 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
   const [taskName, setTaskName] = useState(task.task_name || '')
   const [category, setCategory] = useState(task.category || 'Work')
   const [assignee, setAssignee] = useState(sanitizedAssignee || '')
-  const [dueDate, setDueDate] = useState(task.due_date ? task.due_date.slice(0, 16) : '')
+  const [dueDate, setDueDate] = useState(task.due_date ? toLocalInput(task.due_date) : '')
   const [notes, setNotes] = useState(task.notes || '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1078,7 +1084,7 @@ function SpaceTaskModal({ task, members, modification, onSave, onDelete, onClose
   const isDirty =
     taskName !== (task.task_name || '') ||
     category !== (task.category || 'Work') ||
-    dueDate !== (task.due_date ? task.due_date.slice(0, 16) : '') ||
+    dueDate !== (task.due_date ? toLocalInput(task.due_date) : '') ||
     notes !== (task.notes || '') ||
     assignee !== (sanitizedAssignee || '')
 
