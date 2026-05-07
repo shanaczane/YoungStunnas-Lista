@@ -159,9 +159,6 @@ export default function SpacesScreen({ session, displayName, onNavigate }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-slate-900 font-bold text-base truncate">{space.name}</p>
-                        {space.owner_id === session.user.id && (
-                          <span className="text-[10px] text-accent-deep border border-accent-deep/30 bg-accent-pale px-2 py-0.5 rounded-full flex-shrink-0">Owner</span>
-                        )}
                       </div>
                       {space.description && <p className="text-slate-400 text-xs mt-0.5 truncate">{space.description}</p>}
                       <div className="flex items-center gap-2 mt-1.5">
