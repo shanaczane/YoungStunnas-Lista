@@ -19,7 +19,7 @@ Lista removes this friction by using AI-powered natural language task parsing.
 
 Example:
 
-> "Finish the UI prototype tomorrow and send it to Ken"
+> "Finish the UI prototype tomorrow"
 
 The system automatically extracts:
 - Task name
